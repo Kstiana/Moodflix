@@ -281,13 +281,14 @@ async function openPersonModal(personId) {
     
     try {
       
-        const [personDetails, personCredits] = await Promise.all([
+const [personDetails, personCredits] = await Promise.all([
     fetchFromTMDB(`/person/${personId}`),
     fetchFromTMDB(`/person/${personId}/combined_credits`)
 ]);
-        
-        const movieCredits = creditsResponse.cast?.filter(c => c.media_type === 'movie') || [];
-        const tvCredits = creditsResponse.cast?.filter(c => c.media_type === 'tv') || [];
+
+
+const movieCredits = personCredits.cast?.filter(c => c.media_type === 'movie') || [];
+const tvCredits = personCredits.cast?.filter(c => c.media_type === 'tv') || [];
         
         const sortedMovies = [...movieCredits]
             .sort((a, b) => {
