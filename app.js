@@ -130,7 +130,7 @@ function openStreamingPlayer(movie, type = 'movie') {
     elements.streamingTitle.textContent = `Now Playing: ${movie.title || movie.name}`;
     
     if (type === 'movie') {
-        // MOVIES: Try VidSrc.xyz first (minimal ads)
+       
         const url = `https://vidsrc.xyz/embed/movie/${movie.id}`;
         elements.streamIframe.src = url;
         elements.playerLoading.querySelector('p').textContent = `Loading from Minimal Ads src...`;
@@ -143,7 +143,7 @@ function openStreamingPlayer(movie, type = 'movie') {
                 elements.streamIframe.src = `https://vidsrc.to/embed/movie/${movie.id}`;
                 elements.playerLoading.querySelector('p').textContent = `Loading from backup...`;
             }
-        }, 8000);
+        }, 20000);
         
         elements.streamIframe.onload = () => {
             clearTimeout(movieFallback);
@@ -199,7 +199,7 @@ function openStreamingPlayer(movie, type = 'movie') {
                 elements.streamIframe.src = `https://vidsrc.to/embed/tv/${movie.id}`;
                 elements.playerLoading.querySelector('p').textContent = `Loading from other src contain more ads (Full Episode Control)...`;
             }
-        }, 8000);
+        }, 20000);
         
         elements.streamIframe.onload = () => {
             clearTimeout(tvFallback);
