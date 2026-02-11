@@ -545,7 +545,7 @@ async function fetchMovieDetails(movieId, type = 'movie') {
     try {
         const endpoint = type === 'movie' ? 'movie' : 'tv';
         const data = await fetchFromTMDB(`/${endpoint}/${movieId}?append_to_response=videos,credits`);        
-        return await response.json();
+        return data;
     } catch (error) {
         console.error(`Error fetching details for ${movieId}:`, error);
         return null;
