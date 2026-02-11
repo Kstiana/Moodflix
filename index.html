@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>MoodFlix - Movies That Feel Right</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <style>
+        :root {
+            --netflix-red: #e50914;
+            --netflix-dark: #141414;
+            --netflix-gray: #333;
+            --netflix-light-gray: #808080;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        body {
+            background-color: var(--netflix-dark);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #222;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--netflix-red);
+            border-radius: 5px;
+        }
+        
+        .movie-card, .person-card {
+            transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                        box-shadow 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        
+        .movie-card:hover, .person-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+            z-index: 10;
+        }
+        
+        .gradient-overlay {
+            background: linear-gradient(to top, rgba(20, 20, 20, 1) 0%, rgba(20, 20, 20, 0.9) 10%, rgba(20, 20, 20, 0.7) 30%, rgba(20, 20, 20, 0.4) 50%, transparent 100%);
+        }
+        
+        .gradient-bottom {
+            background: linear-gradient(to bottom, transparent 0%, rgba(20, 20, 20, 0.9) 90%, rgba(20, 20, 20, 1) 100%);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .custom-cursor {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--netflix-red);
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.2s, width 0.3s, height 0.3s;
+        }
+        
+        .cursor-click {
+            transform: scale(0.8);
+        }
+        
+        .cursor-hover {
+            transform: scale(1.5);
+            background-color: rgba(229, 9, 20, 0.2);
+        }
+        
+        .modal-enter {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        .mood-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .mood-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .mood-btn.active {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);
+        }
+        
+        .streaming-player {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+        }
+        
+        .player-header {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .player-iframe {
+            flex: 1;
+            width: 100%;
+            border: none;
+        }
+        
+        .player-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .page {
+            display: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        #homePage {
+            display: block;
+        }
+        
+        .disabled-btn {
+            pointer-events: none;
+            opacity: 0.7;
+            cursor: default;
+        }
+        
+        .watch-later-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 100%;
+            max-width: 380px;
+            height: 100vh;
+            background: #1a1a1a;
+            z-index: 9998;
+            transition: right 0.3s ease;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+        
+        .watch-later-sidebar.open {
+            right: 0;
+        }
+        
+        @media (min-width: 280px) and (max-width: 640px) {
+            .watch-later-sidebar {
+                max-width: 100%;
+            }
+            
+            .hero-title {
+                font-size: 2rem !important;
+            }
+            
+            .container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+        
+            #personModal,
+    #movieModal {
+        z-index: 9999;
+    }
+    
+    #streamingPlayer {
+        z-index: 99999;
+    }
+    
+    .person-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    
+    .person-modal.active {
+        display: flex !important;
+    }
+    
+    #movieModal {
+        z-index: 10000; 
+        }
+        
+        .hamburger {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 24px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .hamburger span {
+            width: 100%;
+            height: 2px;
+            background-color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+        
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -6px);
+        }
+        
+        .mobile-nav {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            width: 280px;
+            height: 100vh;
+            background: #0f0f0f;
+            z-index: 9997;
+            transition: left 0.3s ease;
+            padding-top: 80px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .mobile-nav.open {
+            left: 0;
+        }
+        
+        .mobile-nav-link {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: #fff;
+            border-bottom: 1px solid #333;
+            transition: background 0.2s;
+        }
+        
+        .mobile-nav-link:hover {
+            background: var(--netflix-red);
+        }
+        
+        .mobile-nav-link.active {
+            background: var(--netflix-red);
+            font-weight: bold;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9996;
+            display: none;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        .person-card {
+            width: 160px;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 480px) {
+            .person-card {
+                width: 140px;
+            }
+        }
+        
+        .person-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .person-modal.active {
+            display: flex;
+        }
+        
+        .person-modal-content {
+            background: #1f1f1f;
+            border-radius: 1rem;
+            max-width: 1000px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .remove-watchlater {
+            transition: color 0.2s;
+        }
+        
+        .remove-watchlater:hover {
+            color: var(--netflix-red);
+        }
+        
+        .explore-link {
+            pointer-events: none;
+            cursor: default;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body class="bg-black text-white">
+
+    <div class="custom-cursor hidden md:block"></div>
+    
+    <button id="soundToggle" class="fixed bottom-4 right-4 z-50 bg-netflix-red p-3 rounded-full shadow-lg hover:bg-red-700 transition">
+        <i class="fas fa-volume-up text-white"></i>
+    </button>
+    
+    <div id="mobileOverlay" class="overlay"></div>
+    
+    <div id="mobileNav" class="mobile-nav">
+        <div class="px-6 pb-6 border-b border-gray-800">
+            <h2 class="text-2xl font-bold text-netflix-red">MOODFLIX</h2>
+            <p class="text-gray-400 text-sm mt-1">Movies That Feel Right</p>
+        </div>
+        <div class="flex flex-col">
+            <a href="#" class="mobile-nav-link active" data-page="home">Home</a>
+            <a href="#" class="mobile-nav-link" data-page="movies">Movies</a>
+            <a href="#" class="mobile-nav-link" data-page="series">Series</a>
+            <a href="#" class="mobile-nav-link" data-page="people">People</a>
+            <a href="#" class="mobile-nav-link" data-page="watchlater">Watch Later</a>
+        </div>
+    </div>
+    
+    <div id="watchLaterSidebar" class="watch-later-sidebar">
+        <div class="p-6 border-b border-gray-800 flex justify-between items-center sticky top-0 bg-gray-900 z-10">
+            <h2 class="text-2xl font-bold flex items-center">
+                <i class="far fa-clock mr-3 text-netflix-red"></i>
+                Watch Later
+            </h2>
+            <button id="closeWatchLater" class="text-gray-400 hover:text-white text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="watchLaterList" class="p-4">
+            
+            <div class="text-center text-gray-400 py-8">
+                <i class="far fa-clock text-4xl mb-3 opacity-50"></i>
+                <p>Your watch later list is empty</p>
+                <p class="text-sm mt-2">Add movies from the streaming page</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="streamingPlayer" class="streaming-player">
+        <div class="player-header">
+            <div class="flex items-center space-x-4">
+                <button id="closeStreaming" class="text-white text-2xl hover:text-netflix-red">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2 id="streamingTitle" class="text-xl font-bold">Now Playing</h2>
+            </div>
+            <div class="flex space-x-4">
+                <button id="streamingQuality" class="text-white hover:text-gray-300" title="Quality">
+                    <i class="fas fa-hd"></i>
+                </button>
+                <button id="streamingFullscreen" class="text-white hover:text-gray-300" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="relative flex-1">
+            <div id="playerLoading" class="player-loading">
+                <div class="spinner-border animate-spin inline-block w-12 h-12 border-4 border-netflix-red border-t-transparent rounded-full mb-4"></div>
+                <p class="text-white">Loading stream</p>
+                <p class="text-gray-400 text-sm mt-2">This may take a few seconds</p>
+            </div>
+            
+            <iframe 
+                id="streamIframe"
+                class="player-iframe"
+                frameborder="0"
+                scrolling="no"
+                allowfullscreen
+                allow="autoplay; encrypted-media"
+            ></iframe>
+        </div>
+    </div>
+    
+    <nav id="navbar" class="fixed top-0 w-full z-40 transition-all duration-300 bg-transparent">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+           
+            <div class="flex items-center space-x-10">
+                <h1 class="text-3xl font-bold text-netflix-red tracking-tight">MOODFLIX</h1>
+                
+               
+                <div class="hidden md:flex space-x-6">
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition" data-page="home">Home</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition" data-page="movies">Movies</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition" data-page="series">Series</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition" data-page="people">People</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition" data-page="watchlater">Watch Later</a>
+                </div>
+            </div>
+            
+            
+            <div class="flex items-center space-x-4">
+              
+                <div id="hamburger" class="hamburger md:hidden">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+              
+                <div class="hidden md:flex items-center space-x-4">
+                 
+                    <button id="searchBtn" class="text-white hover:text-gray-300">
+                        <i class="fas fa-search text-xl"></i>
+                    </button>
+                    
+               
+                    <div class="relative">
+                        <i class="fas fa-bell text-xl text-white hover:text-gray-300 cursor-pointer"></i>
+                        <span class="absolute -top-1 -right-1 bg-netflix-red text-xs rounded-full h-5 w-5 flex items-center justify-center watch-later-count">0</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <img src="https://ui-avatars.com/api/?name=User&background=333&color=fff&bold=true" 
+                             alt="Profile" 
+                             class="w-8 h-8 rounded">
+                        <i class="fas fa-caret-down text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <button id="mobileWatchLaterBtn" class="md:hidden text-white relative">
+                    <i class="fas fa-clock text-xl"></i>
+                    <span class="absolute -top-2 -right-2 bg-netflix-red text-xs rounded-full h-5 w-5 flex items-center justify-center watch-later-count">0</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="searchBar" class="hidden container mx-auto px-4 pb-4">
+            <div class="relative">
+                <input type="text" 
+                       id="globalSearchInput"
+                       placeholder="Search for movies, series, actors..." 
+                       class="w-full p-3 bg-gray-900 rounded-lg text-white pl-12 focus:outline-none focus:ring-2 focus:ring-netflix-red">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="pagesContainer">
+     
+        <div id="homePage" class="page active">
+            
+            <section id="hero" class="relative h-screen flex items-center">
+              
+                <div id="heroBackground" class="absolute inset-0 bg-cover bg-center"></div>
+                
+                <div class="absolute inset-0 gradient-overlay"></div>
+                
+                <div class="container mx-auto px-4 relative z-10">
+                    <div class="max-w-2xl animate__animated animate__fadeIn">
+                        <h1 id="heroTitle" class="hero-title text-4xl md:text-7xl font-bold mb-4">Loading...</h1>
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="flex items-center">
+                                <span class="text-green-500 font-bold mr-2">98% Match</span>
+                                <span class="bg-gray-800 px-2 py-1 text-xs rounded">18+</span>
+                                <span class="ml-3 text-gray-300">2023 • 2h 18m • Action, Thriller</span>
+                            </div>
+                        </div>
+                        <p id="heroDescription" class="text-lg text-gray-300 mb-8 max-w-xl">Discover the perfect movie for your current mood. Let us curate a selection based on how you feel.</p>
+                        <div class="flex space-x-4">
+                            <button id="heroPlayBtn" class="play-btn bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-base md:text-lg hover:bg-gray-200 transition flex items-center">
+                                <i class="fas fa-play mr-2"></i> Play
+                            </button>
+                            <button id="heroInfoBtn" class="more-info-btn bg-gray-700 text-white px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-base md:text-lg hover:bg-gray-600 transition flex items-center">
+                                <i class="fas fa-info-circle mr-2"></i> More Info
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+               
+            </section>
+            
+            <main class="relative -mt-32 z-20 gradient-bottom pb-20">
+                
+                <section class="container mx-auto px-4 mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold mb-6">What's Your Mood Today?</h2>
+                    <p class="text-gray-400 mb-8 max-w-2xl text-sm md:text-base">Select your current mood and we'll recommend movies that match your vibe. Your mood changes, so do our recommendations.</p>
+                    
+                    <div id="moodContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
+                        
+                    </div>
+                    
+                    
+                    <div id="selectedMoodDisplay" class="hidden bg-gray-900 rounded-xl p-4 md:p-6 mb-8 border-l-4 border-netflix-red">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg md:text-xl font-bold">Showing recommendations for: <span id="currentMood" class="text-netflix-red">Happy</span></h3>
+                                <p id="moodDescription" class="text-gray-400 mt-1 text-sm md:text-base">Light-hearted comedies and feel-good movies to lift your spirits</p>
+                            </div>
+                            <button id="clearMood" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times text-xl md:text-2xl"></i>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+                
+                <div id="movieRowsContainer" class="container mx-auto px-4 space-y-12">
+                    
+                    <div id="loadingSkeletons">
+                        
+                    </div>
+                </div>
+            </main>
+        </div>
+        
+        <div id="moviesPage" class="page">
+            <div class="container mx-auto px-4 pt-24 pb-12">
+                <h1 class="text-3xl md:text-4xl font-bold mb-8">Movies</h1>
+                
+                <div class="mb-8">
+                    <div class="relative">
+                        <input type="text" 
+                               id="moviesSearchInput"
+                               placeholder="Search for movies..." 
+                               class="w-full p-4 bg-gray-900 rounded-lg text-white pl-12 focus:outline-none focus:ring-2 focus:ring-netflix-red text-base md:text-lg">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div id="moviesContent" class="space-y-12">
+                  
+                </div>
+            </div>
+        </div>
+        
+        <div id="seriesPage" class="page">
+            <div class="container mx-auto px-4 pt-24 pb-12">
+                <h1 class="text-3xl md:text-4xl font-bold mb-8">TV Series</h1>
+                
+                <div class="mb-8">
+                    <div class="relative">
+                        <input type="text" 
+                               id="seriesSearchInput"
+                               placeholder="Search for TV series..." 
+                               class="w-full p-4 bg-gray-900 rounded-lg text-white pl-12 focus:outline-none focus:ring-2 focus:ring-netflix-red text-base md:text-lg">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div id="seriesContent" class="space-y-12">
+                    
+                </div>
+            </div>
+        </div>
+        
+        <div id="peoplePage" class="page">
+            <div class="container mx-auto px-4 pt-24 pb-12">
+                <h1 class="text-3xl md:text-4xl font-bold mb-8">Popular Actors & Actresses</h1>
+                
+                <div class="mb-8">
+                    <div class="relative">
+                        <input type="text" 
+                               id="peopleSearchInput"
+                               placeholder="Search for actors, actresses..." 
+                               class="w-full p-4 bg-gray-900 rounded-lg text-white pl-12 focus:outline-none focus:ring-2 focus:ring-netflix-red text-base md:text-lg">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <div id="peopleGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  
+                </div>
+                
+                <div class="text-center mt-8">
+                    <button id="loadMorePeople" class="bg-gray-800 text-white px-6 py-3 rounded-md hover:bg-gray-700 transition">
+                        Load More
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer id="footer" class="bg-black border-t border-gray-900 py-8">
+        <div class="container mx-auto px-4">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-6 md:mb-0">
+                    <h2 class="text-3xl font-bold text-netflix-red tracking-tight">MOODFLIX</h2>
+                    <p class="text-gray-500 mt-2">Movie discovery based on your emotions</p>
+                </div>
+                
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-white disabled-btn">About</a>
+                    <a href="#" class="text-gray-400 hover:text-white disabled-btn">Privacy</a>
+                    <a href="#" class="text-gray-400 hover:text-white disabled-btn">Terms</a>
+                    <a href="#" class="text-gray-400 hover:text-white disabled-btn">Contact</a>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-gray-500 text-sm">
+                <p>All movie data is provided by TMDb.</p>
+                <p class="mt-2">© 2026 MoodFlix</p>
+            </div>
+        </div>
+    </footer>
+    
+<div id="movieModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden items-center justify-center p-4">
+    <div class="modal-enter bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="relative">
+           
+            <div id="modalContent" class="p-4 md:p-8">
+                
+            </div>
+        </div>
+    </div>
+</div>
+    
+    <div id="personModal" class="person-modal">
+        <div class="person-modal-content modal-enter">
+            <div class="relative p-6">
+              
+                <button id="closePersonModal" class="absolute right-4 top-4 text-white text-3xl z-10 hover:text-netflix-red">
+                    <i class="fas fa-times"></i>
+                </button>
+                
+                <div id="personModalContent" class="mt-4">
+              
+                </div>
+            </div>
+        </div>
+    </div>
+   
+    <div id="watchLaterToast" class="fixed bottom-24 right-4 bg-green-600 text-white p-4 rounded-lg shadow-xl z-50 hidden transform transition-transform duration-300 translate-x-full">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-3 text-xl"></i>
+            <div>
+                <p class="font-bold">Added to Watch Later!</p>
+                <p class="text-sm opacity-90">You can find it in your Watch Later list</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="modal.js"></script>
+    <script src="cursor.js"></script>
+    <script src="pages.js"></script>
+    <script src="watchlater.js"></script>
+    <script src="people.js"></script>
+</body>
+</html>
