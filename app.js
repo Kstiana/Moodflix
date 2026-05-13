@@ -1,67 +1,31 @@
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
-async function fetchFromTMDB(endpoint) {
-    try {
-        const response = await fetch(`/api/tmdb?endpoint=${encodeURIComponent(endpoint)}`);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('API Error:', errorData);
-            return null;
-        }
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            console.error('TMDB API Error:', data.error);
-            return null;
-        }
-        
-        return data;
-    } catch (error) {
-        console.error('Network error:', error);
-        return null;
-    }
-}
-
-const STREAMING_SOURCES = [
-    {
-        name: "VidSrc",    
-        movie: 'https://vidsrc.xyz/embed/movie/',
-        tv: null,
-        type: 'iframe'
-    },
-    {
-        name: "MoviesAPI",   
-        movie: 'https://moviesapi.club/movie/',
-        tv: 'https://moviesapi.club/tv/',
-        type: 'iframe'
-    },
-    {
-        name: "VidSrcTo",   
-        movie: 'https://vidsrc.to/embed/movie/',
-        tv: 'https://vidsrc.to/embed/tv/',
-        type: 'iframe'
-    }
+const MOVIE_SOURCES = [
+    { name: 'VidSrc.me', url: id => `https://vidsrc.me/embed/movie?tmdb=${id}` },
+    { name: 'Embed.su', url: id => `https://embed.su/embed/movie/${id}` },
+    { name: 'VidSrc.to', url: id => `https://vidsrc.to/embed/movie/${id}` }
 ];
 
+const TV_SOURCES = {
+    low: { name: 'MoviesAPI (Low Ads)', url: id => `https://moviesapi.club/tv/${id}` },
+    full: { name: 'VidSrc.to (Full Control)', url: id => `https://vidsrc.to/embed/tv/${id}` }
+};
+
 const MOOD_GENRES = {
-    'happy': { ids: [35, 10751], name: 'Comedy, Family', description: 'Light-hearted comedies and feel-good movies to lift your spirits', emoji: '😄' },
-    'sad': { ids: [18, 10749], name: 'Drama, Romance', description: 'Emotional dramas and touching love stories', emoji: '😢' },
-    'angry': { ids: [28, 53], name: 'Action, Thriller', description: 'Intense action and thrilling adventures to channel your energy', emoji: '😤' },
-    'calm': { ids: [16, 99], name: 'Animation, Documentary', description: 'Peaceful animations and insightful documentaries', emoji: '😌' },
-    'excited': { ids: [12, 878], name: 'Adventure, Sci-Fi', description: 'Epic adventures and mind-bending sci-fi', emoji: '🎉' },
-    'romantic': { ids: [10749, 10402], name: 'Romance, Musical', description: 'Heartwarming love stories and musical delights', emoji: '❤️' }
+    happy:    { ids: [35, 10751], name: 'Comedy & Family', description: 'Light-hearted comedies and feel-good movies to lift your spirits', emoji: '😄' },
+    sad:      { ids: [18, 10749], name: 'Drama & Romance', description: 'Emotional dramas and touching love stories', emoji: '😢' },
+    angry:    { ids: [28, 53],   name: 'Action & Thriller', description: 'Intense action and thrilling adventures to channel your energy', emoji: '😤' },
+    calm:     { ids: [16, 99],   name: 'Animation & Documentary', description: 'Peaceful animations and insightful documentaries', emoji: '😌' },
+    excited:  { ids: [12, 878],  name: 'Adventure & Sci-Fi', description: 'Epic adventures and mind-bending sci-fi', emoji: '🎉' },
+    romantic: { ids: [10749, 10402], name: 'Romance & Musical', description: 'Heartwarming love stories and musical delights', emoji: '❤️' }
 };
 
 let state = {
     currentMood: null,
     featuredMovie: null,
     watchLater: JSON.parse(localStorage.getItem('watchLater')) || [],
-    soundEnabled: true,
     currentStreamingMovie: null,
-    currentSourceIndex: 0,
+    currentMovieSourceIndex: 0,
     currentPage: 'home'
 };
 
@@ -69,6 +33,9 @@ const elements = {
     heroTitle: document.getElementById('heroTitle'),
     heroDescription: document.getElementById('heroDescription'),
     heroBackground: document.getElementById('heroBackground'),
+    heroYear: document.getElementById('heroYear'),
+    heroRating: document.getElementById('heroRating'),
+    heroGenres: document.getElementById('heroGenres'),
     movieRowsContainer: document.getElementById('movieRowsContainer'),
     loadingSkeletons: document.getElementById('loadingSkeletons'),
     selectedMoodDisplay: document.getElementById('selectedMoodDisplay'),
@@ -76,7 +43,6 @@ const elements = {
     moodDescription: document.getElementById('moodDescription'),
     clearMood: document.getElementById('clearMood'),
     navbar: document.getElementById('navbar'),
-    soundToggle: document.getElementById('soundToggle'),
     searchBtn: document.getElementById('searchBtn'),
     searchBar: document.getElementById('searchBar'),
     globalSearchInput: document.getElementById('globalSearchInput'),
@@ -105,8 +71,23 @@ const elements = {
     mobileWatchLaterBtn: document.getElementById('mobileWatchLaterBtn'),
     watchLaterSidebar: document.getElementById('watchLaterSidebar'),
     closeWatchLater: document.getElementById('closeWatchLater'),
-    watchLaterList: document.getElementById('watchLaterList')
+    watchLaterList: document.getElementById('watchLaterList'),
+    recentlyViewedSection: document.getElementById('recentlyViewedSection'),
+    recentlyViewedRow: document.getElementById('recentlyViewedRow'),
+    clearRecentlyViewed: document.getElementById('clearRecentlyViewed')
 };
+
+async function fetchFromTMDB(endpoint) {
+    try {
+        const response = await fetch(`/api/tmdb?endpoint=${encodeURIComponent(endpoint)}`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (data.error) return null;
+        return data;
+    } catch {
+        return null;
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
@@ -121,109 +102,95 @@ async function initializeApp() {
     hideLoadingSkeletons();
     initializeScrollEffect();
     updateWatchLaterBadge();
+    renderRecentlyViewed();
 }
 
 function openStreamingPlayer(movie, type = 'movie') {
     if (!movie || !movie.id) return;
-    
     state.currentStreamingMovie = movie;
+    state.currentMovieSourceIndex = 0;
     elements.streamingTitle.textContent = `Now Playing: ${movie.title || movie.name}`;
-    
+
     if (type === 'movie') {
-       
-        const url = `https://vidsrc.xyz/embed/movie/${movie.id}`;
-        elements.streamIframe.src = url;
-        elements.playerLoading.querySelector('p').textContent = `Loading from Minimal Ads src...`;
+        loadMovieSource(movie.id, 0);
         showPlayer();
-        
-        const movieFallback = setTimeout(() => {
-            if (elements.playerLoading.style.display !== 'none' && 
-                elements.streamIframe.src.includes('vidsrc.xyz')) {
-                console.log('⏰ VidSrc.xyz timeout, using VidSrc.to');
-                elements.streamIframe.src = `https://vidsrc.to/embed/movie/${movie.id}`;
-                elements.playerLoading.querySelector('p').textContent = `Loading from backup...`;
-            }
-        }, 20000);
-        
-        elements.streamIframe.onload = () => {
-            clearTimeout(movieFallback);
-            elements.playerLoading.style.display = 'none';
-            elements.streamIframe.style.display = 'block';
-        };
-        
-        elements.streamIframe.onerror = null;
-        
         return;
     }
-    
-    const modalContent = document.getElementById('modalContent');
- 
-    const sourceSelector = document.createElement('div');
-    sourceSelector.className = 'fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 rounded-lg shadow-xl p-4 z-[10000] border-2 border-netflix-red';
-    sourceSelector.style.maxWidth = '90%';
-    sourceSelector.style.width = '400px';
-    sourceSelector.innerHTML = `
-        <h3 class="text-lg font-bold mb-3 flex items-center">
-            <i class="fas fa-tv mr-2 text-netflix-red"></i>
-            Choose Your Experience
+
+    const picker = document.createElement('div');
+    picker.className = 'source-picker';
+    picker.innerHTML = `
+        <h3 class="text-base font-bold mb-3 flex items-center gap-2">
+            <i class="fas fa-tv" style="color:var(--netflix-red)"></i>
+            Choose Streaming Mode
         </h3>
         <div class="grid grid-cols-2 gap-3">
-            <button id="lowAdsBtn" class="bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition">
-                <i class="fas fa-shield-alt mr-2"></i>
-                Low Ads Mode
-                <span class="block text-xs opacity-90 mt-1">No episode picker • Auto-plays S1E1</span>
+            <button id="lowAdsBtn" class="bg-green-700 hover:bg-green-600 text-white p-3 rounded-lg transition text-sm font-medium">
+                <i class="fas fa-shield-alt block mb-1"></i>
+                Low Ads
+                <span class="block text-xs opacity-80 mt-1 font-normal">Auto S1E1</span>
             </button>
-            <button id="fullControlBtn" class="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-lg transition">
-                <i class="fas fa-sliders-h mr-2"></i>
-                Full Control Mode
-                <span class="block text-xs opacity-90 mt-1">More ads • Pick any season/episode</span>
+            <button id="fullControlBtn" class="bg-orange-700 hover:bg-orange-600 text-white p-3 rounded-lg transition text-sm font-medium">
+                <i class="fas fa-sliders-h block mb-1"></i>
+                Full Control
+                <span class="block text-xs opacity-80 mt-1 font-normal">Pick episode</span>
             </button>
         </div>
-        <p class="text-xs text-gray-400 mt-3 text-center">
-            ⚡ Both work! Choose based on your ad tolerance 
-        </p>
+        <button id="cancelSourcePicker" class="mt-3 w-full text-gray-400 hover:text-white text-xs py-1 transition">Cancel</button>
     `;
-    
-    document.body.appendChild(sourceSelector);
-    
+    document.body.appendChild(picker);
+
+    const removePicker = () => picker.remove();
+
+    document.getElementById('cancelSourcePicker').addEventListener('click', removePicker);
+
     document.getElementById('lowAdsBtn').addEventListener('click', () => {
-        const url = `https://moviesapi.club/tv/${movie.id}`;
-        elements.streamIframe.src = url;
-        elements.playerLoading.querySelector('p').textContent = `Loading from Low Ads, S1E1...`;
-        sourceSelector.remove();
+        removePicker();
+        elements.streamIframe.src = TV_SOURCES.low.url(movie.id);
+        elements.playerLoading.querySelector('p').textContent = 'Loading low-ads stream...';
         showPlayer();
-        
-        const tvFallback = setTimeout(() => {
+        const t = setTimeout(() => {
             if (elements.playerLoading.style.display !== 'none') {
-                
-                elements.streamIframe.src = `https://vidsrc.to/embed/tv/${movie.id}`;
-                elements.playerLoading.querySelector('p').textContent = `Loading from other src contain more ads (Full Episode Control)...`;
+                elements.streamIframe.src = TV_SOURCES.full.url(movie.id);
+                elements.playerLoading.querySelector('p').textContent = 'Switching to backup...';
             }
-        }, 20000);
-        
-        elements.streamIframe.onload = () => {
-            clearTimeout(tvFallback);
-            elements.playerLoading.style.display = 'none';
-            elements.streamIframe.style.display = 'block';
-        };
-        
-        elements.streamIframe.onerror = null;
+        }, 22000);
+        elements.streamIframe.onload = () => { clearTimeout(t); revealPlayer(); };
     });
-    
+
     document.getElementById('fullControlBtn').addEventListener('click', () => {
-        const url = `https://vidsrc.to/embed/tv/${movie.id}`;
-        elements.streamIframe.src = url;
-        elements.playerLoading.querySelector('p').textContent = `Loading from other src contain more ads (Full Episode Control)...`;
-        sourceSelector.remove();
+        removePicker();
+        elements.streamIframe.src = TV_SOURCES.full.url(movie.id);
+        elements.playerLoading.querySelector('p').textContent = 'Loading full control stream...';
         showPlayer();
-        
-        elements.streamIframe.onload = () => {
-            elements.playerLoading.style.display = 'none';
-            elements.streamIframe.style.display = 'block';
-        };
-        
-        elements.streamIframe.onerror = null;
+        elements.streamIframe.onload = () => revealPlayer();
     });
+}
+
+function loadMovieSource(movieId, index) {
+    const src = MOVIE_SOURCES[index];
+    if (!src) return;
+    elements.playerLoading.querySelector('p').textContent = `Loading from ${src.name}...`;
+    elements.streamIframe.style.display = 'none';
+    elements.playerLoading.style.display = 'block';
+    elements.streamIframe.src = src.url(movieId);
+
+    const fallbackTimer = setTimeout(() => {
+        const next = index + 1;
+        if (next < MOVIE_SOURCES.length) {
+            loadMovieSource(movieId, next);
+        }
+    }, 22000);
+
+    elements.streamIframe.onload = () => {
+        clearTimeout(fallbackTimer);
+        revealPlayer();
+    };
+}
+
+function revealPlayer() {
+    elements.playerLoading.style.display = 'none';
+    elements.streamIframe.style.display = 'block';
 }
 
 function showPlayer() {
@@ -233,426 +200,263 @@ function showPlayer() {
     document.body.style.overflow = 'hidden';
 }
 
-function isFrameLoaded() {
-    try {
-        return elements.streamIframe.contentWindow && 
-               elements.streamIframe.contentWindow.document && 
-               elements.streamIframe.contentWindow.document.body &&
-               elements.streamIframe.contentWindow.document.body.innerHTML.length > 100;
-    } catch (e) {
-       
-        return true;
-    }
-}
-
-function tryNextSource(movie, type = 'movie') {
-    state.currentSourceIndex = (state.currentSourceIndex + 1) % STREAMING_SOURCES.length;
-    console.log(`🔄 Switching to source: ${STREAMING_SOURCES[state.currentSourceIndex].name}`);
-    openStreamingPlayer(movie, type);
-}
-
 function closeStreamingPlayer() {
     elements.streamingPlayer.style.display = 'none';
     elements.streamIframe.src = '';
+    elements.streamIframe.onload = null;
     document.body.style.overflow = 'auto';
     state.currentStreamingMovie = null;
-
-    state.currentSourceIndex = 0;
+    state.currentMovieSourceIndex = 0;
 }
 
 async function loadFeaturedMovie() {
-    try {
-        const data = await fetchFromTMDB('/trending/movie/week');
-        
-        const randomIndex = Math.floor(Math.random() * data.results.length);
-        state.featuredMovie = data.results[randomIndex];
-        updateHeroSection(state.featuredMovie);
-    } catch (error) {
-        console.error('Error loading featured movie:', error);
-        
-        state.featuredMovie = {
-            id: 299534, 
-            title: 'Avengers: Endgame',
-            name: 'Avengers: Endgame',
-            overview: 'After the devastating events of Infinity War, the Avengers assemble once more to reverse Thanos\' actions and restore balance to the universe.',
-            backdrop_path: '/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg',
-            vote_average: 8.3
-        };
+    const data = await fetchFromTMDB('/trending/movie/week');
+    if (data && data.results && data.results.length > 0) {
+        const pick = data.results[Math.floor(Math.random() * Math.min(data.results.length, 10))];
+        state.featuredMovie = pick;
+        updateHeroSection(pick);
+    } else {
+        state.featuredMovie = { id: 299534, title: 'Avengers: Endgame', overview: 'After the devastating events of Infinity War, the Avengers assemble once more.', backdrop_path: '/7RyHsO4yDXtBv1zUU3mTpHeQ0d5.jpg', vote_average: 8.3 };
         updateHeroSection(state.featuredMovie);
     }
 }
 
 function updateHeroSection(movie) {
-    elements.heroTitle.textContent = movie.title || movie.name;
-    elements.heroDescription.textContent = movie.overview || 'Discover the perfect movie for your mood';
-    
-    if (movie.backdrop_path) {
-        elements.heroBackground.style.backgroundImage = `linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%), url('${TMDB_IMAGE_BASE}/original${movie.backdrop_path}')`;
+    if (elements.heroTitle) elements.heroTitle.textContent = movie.title || movie.name;
+    if (elements.heroDescription) elements.heroDescription.textContent = movie.overview || 'Discover the perfect movie for your current mood.';
+    if (elements.heroBackground && movie.backdrop_path) {
+        elements.heroBackground.style.backgroundImage = `url('${TMDB_IMAGE_BASE}/original${movie.backdrop_path}')`;
         elements.heroBackground.style.opacity = '0';
-        setTimeout(() => {
-            elements.heroBackground.style.transition = 'opacity 1s ease-in-out';
+        requestAnimationFrame(() => {
+            elements.heroBackground.style.transition = 'opacity 1s ease';
             elements.heroBackground.style.opacity = '1';
-        }, 100);
+        });
     }
-    
-    state.currentStreamingMovie = movie;
+    if (elements.heroYear) {
+        const year = (movie.release_date || movie.first_air_date || '').split('-')[0];
+        elements.heroYear.textContent = year || '';
+    }
+    if (elements.heroRating && movie.vote_average) {
+        elements.heroRating.textContent = `⭐ ${movie.vote_average.toFixed(1)}`;
+    }
 }
 
 function initializeMoodSelector() {
     const moods = [
-        { id: 'happy', emoji: '😄', label: 'Happy', color: 'bg-yellow-500' },
-        { id: 'sad', emoji: '😢', label: 'Sad', color: 'bg-blue-500' },
-        { id: 'angry', emoji: '😤', label: 'Angry', color: 'bg-red-600' },
-        { id: 'calm', emoji: '😌', label: 'Calm', color: 'bg-green-500' },
-        { id: 'excited', emoji: '🎉', label: 'Excited', color: 'bg-purple-500' },
-        { id: 'romantic', emoji: '❤️', label: 'Romantic', color: 'bg-pink-500' }
+        { id: 'happy',    emoji: '😄', label: 'Happy',    color: '#ca8a04' },
+        { id: 'sad',      emoji: '😢', label: 'Sad',      color: '#2563eb' },
+        { id: 'angry',    emoji: '😤', label: 'Angry',    color: '#dc2626' },
+        { id: 'calm',     emoji: '😌', label: 'Calm',     color: '#16a34a' },
+        { id: 'excited',  emoji: '🎉', label: 'Excited',  color: '#9333ea' },
+        { id: 'romantic', emoji: '❤️', label: 'Romantic', color: '#db2777' }
     ];
-    
+    if (!elements.moodContainer) return;
     elements.moodContainer.innerHTML = '';
-    
     moods.forEach(mood => {
-        const button = document.createElement('button');
-        button.className = `mood-btn ${mood.color} p-4 md:p-6 rounded-xl text-white font-bold text-base md:text-xl transition-all duration-300 hover:scale-105 flex flex-col items-center justify-center`;
-        button.innerHTML = `
-            <span class="text-3xl md:text-4xl mb-2">${mood.emoji}</span>
-            <span>${mood.label}</span>
-        `;
-        button.dataset.mood = mood.id;
-        button.addEventListener('click', () => selectMood(mood.id));
-        elements.moodContainer.appendChild(button);
+        const btn = document.createElement('button');
+        btn.className = 'mood-btn rounded-xl text-white font-bold text-sm flex flex-col items-center justify-center gap-1 p-3';
+        btn.style.cssText = `background:${mood.color};min-height:80px`;
+        btn.dataset.mood = mood.id;
+        btn.innerHTML = `<span style="font-size:1.8rem">${mood.emoji}</span><span>${mood.label}</span>`;
+        btn.addEventListener('click', () => selectMood(mood.id));
+        elements.moodContainer.appendChild(btn);
     });
 }
 
 async function selectMood(mood) {
     document.querySelectorAll('.mood-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.mood === mood) {
-            btn.classList.add('active');
-        }
+        btn.classList.toggle('active', btn.dataset.mood === mood);
     });
-    
     state.currentMood = mood;
-    elements.selectedMoodDisplay.classList.remove('hidden');
-    elements.currentMood.textContent = mood.charAt(0).toUpperCase() + mood.slice(1);
-    elements.moodDescription.textContent = MOOD_GENRES[mood].description;
-    
+    if (elements.selectedMoodDisplay) elements.selectedMoodDisplay.classList.remove('hidden');
+    if (elements.currentMood) elements.currentMood.textContent = mood.charAt(0).toUpperCase() + mood.slice(1);
+    if (elements.moodDescription) elements.moodDescription.textContent = MOOD_GENRES[mood].description;
     await loadMoodMovies(mood);
 }
 
 async function loadMoodMovies(mood) {
-    const genreIds = MOOD_GENRES[mood].ids;
     const rowId = `mood-${mood}`;
-    
-    const existingRow = document.getElementById(rowId);
-    if (existingRow) existingRow.remove();
-    
-    try {
-        const movies = await fetchMoviesByGenre(genreIds[0], 10);
-        createMovieRow({
-            id: rowId,
-            title: `Because You're ${mood.charAt(0).toUpperCase() + mood.slice(1)} ${MOOD_GENRES[mood].emoji || ''}`,
-            movies: movies,
-            isMoodRow: true
-        }, true); // Insert at top
-    } catch (error) {
-        console.error(`Error loading ${mood} movies:`, error);
+    const existing = document.getElementById(rowId);
+    if (existing) existing.remove();
+    const movies = await fetchMoviesByGenre(MOOD_GENRES[mood].ids[0], 12);
+    if (movies.length > 0) {
+        createMovieRow({ id: rowId, title: `Because You're ${mood.charAt(0).toUpperCase() + mood.slice(1)} ${MOOD_GENRES[mood].emoji}`, movies, isMoodRow: true }, true);
     }
 }
 
 async function loadInitialRows() {
     const rows = [
-        { id: 'trending', title: 'Trending Now', fetchFunction: fetchTrendingMovies },
-        { id: 'top-rated', title: 'Top Rated', fetchFunction: fetchTopRatedMovies },
-        { id: 'action', title: 'Action Movies', fetchFunction: () => fetchMoviesByGenre(28) },
-        { id: 'comedy', title: 'Comedies', fetchFunction: () => fetchMoviesByGenre(35) }
+        { id: 'trending',  title: '🔥 Trending Now',  fn: fetchTrendingMovies },
+        { id: 'top-rated', title: '⭐ Top Rated',      fn: fetchTopRatedMovies },
+        { id: 'action',    title: '💥 Action Movies',  fn: () => fetchMoviesByGenre(28, 12) },
+        { id: 'comedy',    title: '😂 Comedies',       fn: () => fetchMoviesByGenre(35, 12) },
+        { id: 'scifi',     title: '🚀 Sci-Fi',         fn: () => fetchMoviesByGenre(878, 12) },
+        { id: 'animation', title: '🎨 Animation',      fn: () => fetchMoviesByGenre(16, 12) }
     ];
-    
     for (const row of rows) {
-        try {
-            const movies = await row.fetchFunction();
-            createMovieRow({
-                id: row.id,
-                title: row.title,
-                movies: movies.slice(0, 10)
-            });
-        } catch (error) {
-            console.error(`Error loading ${row.title}:`, error);
+        const movies = await row.fn();
+        if (movies.length > 0) {
+            createMovieRow({ id: row.id, title: row.title, movies });
         }
     }
 }
 
 function createMovieRow(config, insertAtTop = false) {
     const { id, title, movies, isMoodRow = false } = config;
-    
     if (!movies || movies.length === 0) return;
-    
+
     const row = document.createElement('div');
     row.id = id;
-    row.className = 'movie-row mb-12';
-    
+    row.className = 'movie-row mb-10';
+
     const header = document.createElement('div');
     header.className = 'flex justify-between items-center mb-4';
-    header.innerHTML = `
-        <h3 class="text-xl md:text-2xl font-bold">${title}</h3>
-        ${isMoodRow ? '' : '<a href="#" class="explore-link text-gray-400 text-sm pointer-events-none opacity-70 cursor-default">Explore All <i class="fas fa-chevron-right ml-1"></i></a>'}
-    `;
-    
-    const moviesContainer = document.createElement('div');
-    moviesContainer.className = 'relative';
-    
-    const moviesWrapper = document.createElement('div');
-    moviesWrapper.className = 'flex space-x-4 overflow-x-auto pb-4 scrollbar-hide';
-    moviesWrapper.style.scrollBehavior = 'smooth';
-    
-    movies.forEach(movie => {
-        const movieCard = createMovieCard(movie);
-        moviesWrapper.appendChild(movieCard);
-    });
-    
-    moviesContainer.appendChild(moviesWrapper);
+    header.innerHTML = `<h3 class="text-lg md:text-xl font-bold">${title}</h3>`;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-3 overflow-x-auto pb-3 scrollbar-hide';
+
+    movies.forEach(movie => wrapper.appendChild(createMovieCard(movie)));
+
     row.appendChild(header);
-    row.appendChild(moviesContainer);
-    
-    if (insertAtTop && elements.movieRowsContainer.firstChild) {
-        elements.movieRowsContainer.insertBefore(row, elements.movieRowsContainer.firstChild);
+    row.appendChild(wrapper);
+
+    const container = elements.movieRowsContainer;
+    if (insertAtTop && container.firstChild) {
+        container.insertBefore(row, container.firstChild);
     } else {
-        elements.movieRowsContainer.appendChild(row);
+        container.appendChild(row);
     }
 }
 
 function createMovieCard(movie) {
     const card = document.createElement('div');
-    card.className = 'movie-card flex-shrink-0 w-36 sm:w-44 md:w-48 rounded-lg overflow-hidden cursor-pointer relative group';
+    card.className = 'movie-card flex-shrink-0 rounded-lg overflow-hidden cursor-pointer relative group';
+    card.style.width = 'clamp(110px, 32vw, 176px)';
     card.dataset.movieId = movie.id;
-    card.dataset.movieTitle = movie.title || movie.name;
-    
+
     const posterPath = movie.poster_path || movie.backdrop_path;
-    const posterUrl = posterPath 
-        ? `${TMDB_IMAGE_BASE}/w342${posterPath}`
-        : 'https://via.placeholder.com/342x513?text=No+Poster';
-    
-    const poster = document.createElement('div');
-    poster.className = 'h-56 sm:h-64 md:h-72 bg-gray-800 rounded-lg overflow-hidden bg-cover bg-center';
-    poster.style.backgroundImage = `url('${posterUrl}')`;
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3 md:p-4 flex flex-col justify-end';
-    
-    overlay.innerHTML = `
-        <h4 class="font-bold text-white text-xs md:text-sm mb-1 truncate">${movie.title || movie.name}</h4>
-        <div class="flex items-center justify-between text-xs text-gray-300">
-            <div class="flex items-center">
-                <i class="fas fa-star text-yellow-400 mr-1"></i>
-                <span>${movie.vote_average?.toFixed(1) || 'N/A'}</span>
-            </div>
-            <span>${movie.release_date?.split('-')[0] || movie.first_air_date?.split('-')[0] || 'N/A'}</span>
+    const posterUrl = posterPath ? `${TMDB_IMAGE_BASE}/w342${posterPath}` : 'https://placehold.co/342x513/1a1a1a/666?text=No+Poster';
+
+    card.innerHTML = `
+        <div class="bg-gray-800 rounded-lg overflow-hidden" style="aspect-ratio:2/3">
+            <img src="${posterUrl}"
+                 alt="${movie.title || movie.name}"
+                 class="w-full h-full object-cover"
+                 loading="lazy"
+                 onerror="this.src='https://placehold.co/342x513/1a1a1a/666?text=No+Poster'">
         </div>
-        <p class="text-xs text-gray-300 mt-2 line-clamp-2 hidden md:block">${movie.overview || 'No description available'}</p>
-        <div class="flex space-x-2 mt-2 md:mt-3">
-            <button class="watch-stream-btn text-xs bg-netflix-red text-white px-2 md:px-3 py-1 rounded hover:bg-red-700">
-                <i class="fas fa-play mr-1"></i> Stream
-            </button>
-            <button class="info-btn text-xs bg-gray-800 text-white px-2 md:px-3 py-1 rounded hover:bg-gray-700">
-                <i class="fas fa-info-circle mr-1"></i> Info
-            </button>
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-2 flex flex-col justify-end rounded-lg">
+            <h4 class="font-bold text-white text-xs mb-1 line-clamp-2">${movie.title || movie.name}</h4>
+            <div class="flex items-center justify-between text-xs text-gray-300">
+                <span class="text-yellow-400">⭐ ${movie.vote_average?.toFixed(1) || 'N/A'}</span>
+                <span>${(movie.release_date || movie.first_air_date || '').split('-')[0] || ''}</span>
+            </div>
         </div>
     `;
-    
-    card.appendChild(poster);
-    card.appendChild(overlay);
-    
-    card.querySelector('.watch-stream-btn')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        state.currentStreamingMovie = movie;
-        openStreamingPlayer(movie, movie.media_type === 'tv' ? 'tv' : 'movie');
-    });
-    
-    card.querySelector('.info-btn')?.addEventListener('click', (e) => {
-        e.stopPropagation();
+
+    card.addEventListener('click', () => {
         openMovieModal(movie.id, movie.media_type === 'tv' ? 'tv' : 'movie');
     });
-    
     return card;
 }
 
 async function fetchTrendingMovies() {
-    try {
-        const data = await fetchFromTMDB('/trending/movie/week');
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error fetching trending movies:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB('/trending/movie/week');
+    return data?.results || [];
 }
 
 async function fetchTrendingTV() {
-    try {
-        const data = await fetchFromTMDB('/trending/tv/week');
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error fetching trending TV:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB('/trending/tv/week');
+    return data?.results || [];
 }
 
 async function fetchTopRatedMovies() {
-    try {
-        const data = await fetchFromTMDB('/movie/top_rated?page=1');
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error fetching top rated movies:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB('/movie/top_rated?page=1');
+    return data?.results || [];
 }
 
 async function fetchTopRatedTV() {
-    try {
-        const data = await fetchFromTMDB('/tv/top_rated?page=1');
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error fetching top rated TV:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB('/tv/top_rated?page=1');
+    return data?.results || [];
 }
 
-async function fetchMoviesByGenre(genreId, count = 10) {
-    try {
-        const data = await fetchFromTMDB(`/discover/movie?with_genres=${genreId}&sort_by=popularity.desc&page=1`);
-        
-        return data.results.slice(0, count);
-    } catch (error) {
-        console.error(`Error fetching genre ${genreId} movies:`, error);
-        return [];
-    }
+async function fetchMoviesByGenre(genreId, count = 12, page = 1) {
+    const data = await fetchFromTMDB(`/discover/movie?with_genres=${genreId}&sort_by=popularity.desc&page=${page}`);
+    return (data?.results || []).slice(0, count);
 }
 
-async function fetchTVByGenre(genreId, count = 10) {
-    try {
-        const data = await fetchFromTMDB(`/discover/tv?with_genres=${genreId}&sort_by=popularity.desc&page=1`);
-        
-        return data.results.slice(0, count);
-    } catch (error) {
-        console.error(`Error fetching genre ${genreId} TV:`, error);
-        return [];
-    }
+async function fetchTVByGenre(genreId, count = 12, page = 1) {
+    const data = await fetchFromTMDB(`/discover/tv?with_genres=${genreId}&sort_by=popularity.desc&page=${page}`);
+    return (data?.results || []).slice(0, count);
 }
 
 async function fetchMovieDetails(movieId, type = 'movie') {
-    try {
-        const endpoint = type === 'movie' ? 'movie' : 'tv';
-        const data = await fetchFromTMDB(`/${endpoint}/${movieId}?append_to_response=videos,credits`);        
-        return data;
-    } catch (error) {
-        console.error(`Error fetching details for ${movieId}:`, error);
-        return null;
-    }
+    const endpoint = type === 'tv' ? 'tv' : 'movie';
+    return await fetchFromTMDB(`/${endpoint}/${movieId}?append_to_response=videos,credits`);
 }
 
 async function searchMovies(query) {
-    try {
-        const data = await fetchFromTMDB(`/search/movie?query=${encodeURIComponent(query)}&page=1`);
-        
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error searching movies:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB(`/search/movie?query=${encodeURIComponent(query)}&page=1`);
+    return data?.results || [];
 }
 
 async function searchTV(query) {
-    try {
-        const data = await fetchFromTMDB(`/search/tv?query=${encodeURIComponent(query)}&page=1`);
-        
-        return data.results;
-    } catch (error) {
-        console.error('Error searching TV:', error);
-        return [];
-    }
+    const data = await fetchFromTMDB(`/search/tv?query=${encodeURIComponent(query)}&page=1`);
+    return data?.results || [];
 }
 
 function showLoadingSkeletons() {
     if (!elements.loadingSkeletons) return;
-    
-    let skeletonHTML = '';
-    
+    let html = '';
     for (let i = 0; i < 4; i++) {
-        skeletonHTML += `
-            <div class="mb-12">
-                <div class="h-6 md:h-8 w-36 md:w-48 bg-gray-800 rounded animate-pulse mb-4"></div>
-                <div class="flex space-x-4 overflow-x-hidden">
-                    ${Array(6).fill().map(() => `
-                        <div class="w-36 sm:w-44 md:w-48 h-56 sm:h-64 md:h-72 bg-gray-800 rounded animate-pulse flex-shrink-0"></div>
-                    `).join('')}
+        html += `
+            <div class="mb-10">
+                <div class="h-5 w-40 bg-gray-800 rounded animate-pulse mb-4"></div>
+                <div class="flex gap-3 overflow-x-hidden">
+                    ${Array(6).fill().map(() => `<div class="flex-shrink-0 bg-gray-800 rounded animate-pulse" style="width:clamp(110px,32vw,176px);aspect-ratio:2/3"></div>`).join('')}
                 </div>
-            </div>
-        `;
+            </div>`;
     }
-    
-    elements.loadingSkeletons.innerHTML = skeletonHTML;
+    elements.loadingSkeletons.innerHTML = html;
 }
 
 function hideLoadingSkeletons() {
-    if (elements.loadingSkeletons) {
-        elements.loadingSkeletons.innerHTML = '';
-    }
+    if (elements.loadingSkeletons) elements.loadingSkeletons.innerHTML = '';
 }
 
 function switchPage(pageId) {
-
     Object.values(elements.pages).forEach(page => {
-        if (page) {
-            page.classList.remove('active');
-            page.style.display = 'none'; 
-        }
+        if (page) { page.classList.remove('active'); page.style.display = 'none'; }
     });
-
     if (elements.pages[pageId]) {
-        elements.pages[pageId].style.display = 'block'; 
-        elements.pages[pageId].classList.add('active'); 
+        elements.pages[pageId].style.display = 'block';
+        elements.pages[pageId].classList.add('active');
     }
-    
     if (elements.footer) {
         elements.footer.style.display = pageId === 'home' ? 'block' : 'none';
     }
-    
     document.querySelectorAll('.nav-link, .mobile-nav-link').forEach(link => {
-        link.classList.remove('active');
-        if (link.dataset.page === pageId) {
-            link.classList.add('active');
-        }
+        link.classList.toggle('active', link.dataset.page === pageId);
     });
-    
     state.currentPage = pageId;
-    
     closeMobileNav();
-    
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function openWatchLaterSidebar() {
     if (elements.watchLaterSidebar) {
+        if (typeof loadWatchLaterList === 'function') loadWatchLaterList();
         elements.watchLaterSidebar.classList.add('open');
-        if (elements.mobileOverlay) {
-            elements.mobileOverlay.classList.add('active');
-        }
+        if (elements.mobileOverlay) elements.mobileOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
     }
 }
 
 function closeWatchLaterSidebar() {
-    if (elements.watchLaterSidebar) {
-        elements.watchLaterSidebar.classList.remove('open');
-    }
-    if (elements.mobileOverlay) {
-        elements.mobileOverlay.classList.remove('active');
-    }
+    if (elements.watchLaterSidebar) elements.watchLaterSidebar.classList.remove('open');
+    if (elements.mobileOverlay) elements.mobileOverlay.classList.remove('active');
+    document.body.style.overflow = 'auto';
 }
 
 function toggleMobileNav() {
@@ -671,235 +475,64 @@ function closeMobileNav() {
     }
 }
 
-function initializeEventListeners() {
-
-    if (elements.clearMood) {
-        elements.clearMood.addEventListener('click', () => {
-            state.currentMood = null;
-            elements.selectedMoodDisplay.classList.add('hidden');
-            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('active'));
-            const moodRow = document.querySelector('[id^="mood-"]');
-            if (moodRow) moodRow.remove();
-        });
-    }
-    
-    if (elements.soundToggle) {
-        elements.soundToggle.addEventListener('click', () => {
-            state.soundEnabled = !state.soundEnabled;
-            const icon = elements.soundToggle.querySelector('i');
-            icon.className = state.soundEnabled ? 'fas fa-volume-up' : 'fas fa-volume-mute';
-            elements.soundToggle.classList.toggle('bg-gray-600', !state.soundEnabled);
-            elements.soundToggle.classList.toggle('bg-netflix-red', state.soundEnabled);
-        });
-    }
-    
-    if (elements.searchBtn) {
-        elements.searchBtn.addEventListener('click', () => {
-            elements.searchBar.classList.toggle('hidden');
-        });
-    }
-    
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#searchBar') && !e.target.closest('#searchBtn')) {
-            if (elements.searchBar) elements.searchBar.classList.add('hidden');
-        }
-    });
-    
-    if (elements.heroPlayBtn) {
-        elements.heroPlayBtn.addEventListener('click', () => {
-            if (state.featuredMovie) {
-                openStreamingPlayer(state.featuredMovie, 'movie');
-            }
-        });
-    }
-    
-    if (elements.heroInfoBtn) {
-        elements.heroInfoBtn.addEventListener('click', () => {
-            if (state.featuredMovie) {
-                openMovieModal(state.featuredMovie.id, 'movie');
-            }
-        });
-    }
-    
-    if (elements.closeStreaming) {
-        elements.closeStreaming.addEventListener('click', closeStreamingPlayer);
-    }
-    
-    if (elements.streamingFullscreen) {
-        elements.streamingFullscreen.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                elements.streamingPlayer.requestFullscreen().catch(err => {
-                    console.log(`Error enabling fullscreen: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        });
-    }
-    
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (elements.streamingPlayer.style.display === 'flex') {
-                closeStreamingPlayer();
-            }
-            closeWatchLaterSidebar();
-            closeMobileNav();
-        }
-    });
-    
-    elements.navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page === 'watchlater') {
-                openWatchLaterSidebar();
-            } else {
-                switchPage(page);
-            }
-        });
-    });
-    
-    elements.mobileNavLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const page = link.dataset.page;
-            if (page === 'watchlater') {
-                openWatchLaterSidebar();
-                closeMobileNav();
-            } else {
-                switchPage(page);
-            }
-        });
-    });
-    
-    if (elements.hamburger) {
-        elements.hamburger.addEventListener('click', toggleMobileNav);
-    }
-    
-    if (elements.mobileOverlay) {
-        elements.mobileOverlay.addEventListener('click', () => {
-            closeMobileNav();
-            closeWatchLaterSidebar();
-        });
-    }
-    
-    if (elements.closeWatchLater) {
-        elements.closeWatchLater.addEventListener('click', closeWatchLaterSidebar);
-    }
-    
-    if (elements.mobileWatchLaterBtn) {
-        elements.mobileWatchLaterBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            openWatchLaterSidebar();
-        });
-    }
-    
-    if (elements.globalSearchInput) {
-        let searchTimeout;
-        elements.globalSearchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                if (e.target.value.length > 2) {
-                    performGlobalSearch(e.target.value);
-                }
-            }, 500);
-        });
-    }
-}
-
-function initializeScrollEffect() {
-    window.addEventListener('scroll', () => {
-        if (elements.navbar) {
-            if (window.scrollY > 100) {
-                elements.navbar.classList.remove('bg-transparent');
-                elements.navbar.classList.add('bg-black', 'bg-opacity-90', 'backdrop-blur-sm', 'shadow-lg');
-            } else {
-                elements.navbar.classList.add('bg-transparent');
-                elements.navbar.classList.remove('bg-black', 'bg-opacity-90', 'backdrop-blur-sm', 'shadow-lg');
-            }
-        }
-    });
-}
-
-async function performGlobalSearch(query) {
-    if (state.currentPage !== 'home') return;
-    
-    try {
-        const movies = await searchMovies(query);
-        
-        const searchRowId = 'global-search-results';
-        const existingRow = document.getElementById(searchRowId);
-        if (existingRow) existingRow.remove();
-        
-        if (movies.length > 0) {
-            createMovieRow({
-                id: searchRowId,
-                title: `Search Results for "${query}"`,
-                movies: movies.slice(0, 10)
-            }, true);
-            
-            document.getElementById(searchRowId)?.scrollIntoView({ behavior: 'smooth' });
-        }
-    } catch (error) {
-        console.error('Error performing search:', error);
-    }
-}
-
 function addToWatchLater(movie) {
     if (!movie) return;
-    
-    const movieData = {
+    const item = {
         id: movie.id,
         title: movie.title || movie.name,
         poster_path: movie.poster_path || movie.backdrop_path,
         media_type: movie.media_type || 'movie',
         addedAt: new Date().toISOString()
     };
-    
     if (!state.watchLater.some(m => m.id === movie.id)) {
-        state.watchLater.push(movieData);
+        state.watchLater.push(item);
         localStorage.setItem('watchLater', JSON.stringify(state.watchLater));
-        showToast('Added to Watch Later!');
+        showToast('Added to Watch Later!', 'added');
         updateWatchLaterBadge();
-        
         document.dispatchEvent(new CustomEvent('watchLaterUpdated'));
     } else {
-        showToast('Already in Watch Later!');
+        showToast('Already in Watch Later!', 'info');
     }
 }
 
 function removeFromWatchLater(movieId) {
-    state.watchLater = state.watchLater.filter(m => m.id !== movieId);
-    localStorage.setItem('watchLater', JSON.stringify(state.watchLater));
-    showToast('Removed from Watch Later', 'removed');
-    updateWatchLaterBadge();
-    
-    document.dispatchEvent(new CustomEvent('watchLaterUpdated'));
+    const idx = state.watchLater.findIndex(m => m.id === movieId);
+    if (idx !== -1) {
+        const removed = state.watchLater[idx];
+        state.watchLater.splice(idx, 1);
+        localStorage.setItem('watchLater', JSON.stringify(state.watchLater));
+        showToast(`"${removed.title}" removed`, 'removed');
+        updateWatchLaterBadge();
+        document.dispatchEvent(new CustomEvent('watchLaterUpdated'));
+    }
+}
+
+function isInWatchLater(movieId) {
+    return state.watchLater.some(m => m.id === movieId);
+}
+
+function getWatchLaterCount() {
+    return state.watchLater.length;
 }
 
 function showToast(message, type = 'added') {
     const toast = document.getElementById('watchLaterToast');
     if (!toast) return;
-    
-    const toastText = toast.querySelector('p:first-child');
-    const toastIcon = toast.querySelector('i');
-    
-    toastText.textContent = message;
-    
+    const msgEl = document.getElementById('toastMessage');
+    const icon = toast.querySelector('i');
+    if (msgEl) msgEl.textContent = message;
+    toast.className = toast.className.replace(/bg-\w+-\d+/g, '');
     if (type === 'removed') {
-        toastIcon.className = 'fas fa-trash mr-3 text-xl';
-        toast.classList.remove('bg-green-600');
         toast.classList.add('bg-red-600');
+        if (icon) icon.className = 'fas fa-trash text-xl flex-shrink-0';
     } else {
-        toastIcon.className = 'fas fa-check-circle mr-3 text-xl';
-        toast.classList.remove('bg-red-600');
         toast.classList.add('bg-green-600');
+        if (icon) icon.className = 'fas fa-check-circle text-xl flex-shrink-0';
     }
-    
     toast.classList.remove('hidden', 'translate-x-full');
     toast.classList.add('translate-x-0');
-    
-    setTimeout(() => {
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
         toast.classList.remove('translate-x-0');
         toast.classList.add('translate-x-full');
         setTimeout(() => toast.classList.add('hidden'), 300);
@@ -908,12 +541,202 @@ function showToast(message, type = 'added') {
 
 function updateWatchLaterBadge() {
     const count = state.watchLater.length;
-    elements.watchLaterCount.forEach(el => {
-        if (el) el.textContent = count;
+    elements.watchLaterCount.forEach(el => { if (el) el.textContent = count; });
+}
+
+function addToRecentlyViewed(movie, mediaType) {
+    if (!movie) return;
+    const recent = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+    const filtered = recent.filter(m => m.id !== movie.id);
+    filtered.unshift({ id: movie.id, title: movie.title || movie.name, poster_path: movie.poster_path, media_type: mediaType || movie.media_type || 'movie' });
+    localStorage.setItem('recentlyViewed', JSON.stringify(filtered.slice(0, 12)));
+    renderRecentlyViewed();
+}
+
+function renderRecentlyViewed() {
+    const recent = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+    if (!elements.recentlyViewedSection || !elements.recentlyViewedRow) return;
+    if (recent.length === 0) {
+        elements.recentlyViewedSection.classList.add('hidden');
+        return;
+    }
+    elements.recentlyViewedSection.classList.remove('hidden');
+    elements.recentlyViewedRow.innerHTML = '';
+    recent.forEach(movie => {
+        const el = document.createElement('div');
+        el.className = 'flex-shrink-0 cursor-pointer rounded-lg overflow-hidden group relative';
+        el.style.width = 'clamp(90px, 25vw, 140px)';
+        const poster = movie.poster_path ? `${TMDB_IMAGE_BASE}/w185${movie.poster_path}` : 'https://placehold.co/185x278/1a1a1a/666?text=No+Poster';
+        el.innerHTML = `
+            <div style="aspect-ratio:2/3" class="bg-gray-800 overflow-hidden rounded-lg">
+                <img src="${poster}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.src='https://placehold.co/185x278/1a1a1a/666?text=No+Poster'">
+            </div>
+            <p class="text-xs text-gray-300 mt-1 truncate">${movie.title}</p>
+        `;
+        el.addEventListener('click', () => openMovieModal(movie.id, movie.media_type));
+        elements.recentlyViewedRow.appendChild(el);
     });
+}
+
+function initializeEventListeners() {
+    if (elements.clearMood) {
+        elements.clearMood.addEventListener('click', () => {
+            state.currentMood = null;
+            elements.selectedMoodDisplay.classList.add('hidden');
+            document.querySelectorAll('.mood-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('[id^="mood-"]')?.remove();
+        });
+    }
+
+    if (elements.searchBtn) {
+        elements.searchBtn.addEventListener('click', () => elements.searchBar.classList.toggle('hidden'));
+    }
+
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#searchBar') && !e.target.closest('#searchBtn')) {
+            elements.searchBar?.classList.add('hidden');
+        }
+    });
+
+    if (elements.heroPlayBtn) {
+        elements.heroPlayBtn.addEventListener('click', () => {
+            if (state.featuredMovie) openStreamingPlayer(state.featuredMovie, 'movie');
+        });
+    }
+
+    if (elements.heroInfoBtn) {
+        elements.heroInfoBtn.addEventListener('click', () => {
+            if (state.featuredMovie) openMovieModal(state.featuredMovie.id, 'movie');
+        });
+    }
+
+    if (elements.closeStreaming) {
+        elements.closeStreaming.addEventListener('click', closeStreamingPlayer);
+    }
+
+    if (elements.streamingFullscreen) {
+        elements.streamingFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                elements.streamingPlayer.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            if (elements.streamingPlayer.style.display === 'flex') closeStreamingPlayer();
+            closeWatchLaterSidebar();
+            closeMobileNav();
+        }
+    });
+
+    elements.navLinks.forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            if (page === 'watchlater') openWatchLaterSidebar();
+            else switchPage(page);
+        });
+    });
+
+    elements.mobileNavLinks.forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            closeMobileNav();
+            if (page === 'watchlater') openWatchLaterSidebar();
+            else switchPage(page);
+        });
+    });
+
+    if (elements.hamburger) elements.hamburger.addEventListener('click', toggleMobileNav);
+
+    if (elements.mobileOverlay) {
+        elements.mobileOverlay.addEventListener('click', () => {
+            closeMobileNav();
+            closeWatchLaterSidebar();
+        });
+    }
+
+    if (elements.closeWatchLater) elements.closeWatchLater.addEventListener('click', closeWatchLaterSidebar);
+
+    if (elements.mobileWatchLaterBtn) {
+        elements.mobileWatchLaterBtn.addEventListener('click', e => {
+            e.preventDefault();
+            openWatchLaterSidebar();
+        });
+    }
+
+    if (elements.globalSearchInput) {
+        let searchTimeout;
+        elements.globalSearchInput.addEventListener('input', e => {
+            clearTimeout(searchTimeout);
+            const val = e.target.value.trim();
+            if (val.length > 2) {
+                searchTimeout = setTimeout(() => performGlobalSearch(val), 500);
+            }
+        });
+    }
+
+    if (elements.clearRecentlyViewed) {
+        elements.clearRecentlyViewed.addEventListener('click', () => {
+            localStorage.removeItem('recentlyViewed');
+            renderRecentlyViewed();
+        });
+    }
+}
+
+function initializeScrollEffect() {
+    window.addEventListener('scroll', () => {
+        if (!elements.navbar) return;
+        if (window.scrollY > 80) {
+            elements.navbar.style.background = 'rgba(0,0,0,0.95)';
+            elements.navbar.style.backdropFilter = 'blur(8px)';
+        } else {
+            elements.navbar.style.background = 'transparent';
+            elements.navbar.style.backdropFilter = 'none';
+        }
+    }, { passive: true });
+}
+
+async function performGlobalSearch(query) {
+    if (state.currentPage !== 'home') return;
+    const [movies, tv] = await Promise.all([searchMovies(query), searchTV(query)]);
+    const combined = [
+        ...movies.map(m => ({ ...m, media_type: 'movie' })),
+        ...tv.map(t => ({ ...t, media_type: 'tv' }))
+    ].slice(0, 12);
+
+    const existingRow = document.getElementById('global-search-results');
+    if (existingRow) existingRow.remove();
+
+    if (combined.length > 0) {
+        createMovieRow({ id: 'global-search-results', title: `Results for "${query}"`, movies: combined }, true);
+        document.getElementById('global-search-results')?.scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 window.openStreamingPlayer = openStreamingPlayer;
 window.addToWatchLater = addToWatchLater;
 window.removeFromWatchLater = removeFromWatchLater;
+window.isInWatchLater = isInWatchLater;
+window.getWatchLaterCount = getWatchLaterCount;
+window.addToRecentlyViewed = addToRecentlyViewed;
+window.switchPage = switchPage;
+window.openWatchLaterSidebar = openWatchLaterSidebar;
+window.closeWatchLaterSidebar = closeWatchLaterSidebar;
+window.fetchFromTMDB = fetchFromTMDB;
+window.fetchMovieDetails = fetchMovieDetails;
+window.fetchMoviesByGenre = fetchMoviesByGenre;
+window.fetchTVByGenre = fetchTVByGenre;
+window.fetchTrendingMovies = fetchTrendingMovies;
+window.fetchTrendingTV = fetchTrendingTV;
+window.fetchTopRatedMovies = fetchTopRatedMovies;
+window.fetchTopRatedTV = fetchTopRatedTV;
+window.searchMovies = searchMovies;
+window.searchTV = searchTV;
+window.showToast = showToast;
 window.state = state;
+window.TMDB_IMAGE_BASE = TMDB_IMAGE_BASE;
