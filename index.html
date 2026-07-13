@@ -356,43 +356,56 @@
     <div id="pagesContainer">
 
         <div id="homePage" class="page active">
-            <section id="hero" class="relative flex items-end md:items-center" style="min-height:85vh">
-                <div id="heroBackground" class="absolute inset-0 bg-cover bg-center bg-gray-900"></div>
+            <section id="hero" class="relative h-screen flex items-center">
+              
+                <div id="heroBackground" class="absolute inset-0 bg-cover bg-center"></div>
+                
                 <div class="absolute inset-0 gradient-overlay"></div>
-                <div class="container mx-auto px-4 relative z-10 pb-10 md:pb-0 pt-20 md:pt-0">
-                    <div class="max-w-xl animate__animated animate__fadeIn">
-                        <div id="heroBadge" class="flex flex-wrap items-center gap-2 mb-3">
-                            <span id="heroYear" class="text-xs bg-gray-800 bg-opacity-80 px-2 py-1 rounded"></span>
-                            <span id="heroRating" class="text-xs font-bold text-yellow-400"></span>
-                            <span id="heroGenres" class="text-xs text-gray-300"></span>
+                
+                <div class="container mx-auto px-4 relative z-10">
+                    <div class="max-w-2xl animate__animated animate__fadeIn">
+                        <h1 id="heroTitle" class="hero-title text-4xl md:text-7xl font-bold mb-4">Loading...</h1>
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="flex items-center">
+                                <span class="text-green-500 font-bold mr-2">98% Match</span>
+                                <span class="bg-gray-800 px-2 py-1 text-xs rounded">18+</span>
+                                <span class="ml-3 text-gray-300">2023 • 2h 18m • Action, Thriller</span>
+                            </div>
                         </div>
-                        <h1 id="heroTitle" class="text-3xl sm:text-5xl md:text-6xl font-black mb-3 leading-tight">Loading...</h1>
-                        <p id="heroDescription" class="text-sm md:text-base text-gray-300 mb-6 line-clamp-3">Discover the perfect movie for your current mood.</p>
-                        <div class="flex gap-3 flex-wrap">
-                            <button id="heroPlayBtn" class="flex items-center gap-2 bg-white text-black px-5 md:px-7 py-2.5 rounded font-bold text-sm md:text-base hover:bg-gray-200 transition">
-                                <i class="fas fa-play text-xs"></i> Play
+                        <p id="heroDescription" class="text-lg text-gray-300 mb-8 max-w-xl">Discover the perfect movie for your current mood. Let us curate a selection based on how you feel.</p>
+                        <div class="flex space-x-4">
+                            <button id="heroPlayBtn" class="play-btn bg-white text-black px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-base md:text-lg hover:bg-gray-200 transition flex items-center">
+                                <i class="fas fa-play mr-2"></i> Play
                             </button>
-                            <button id="heroInfoBtn" class="flex items-center gap-2 bg-gray-700 bg-opacity-80 text-white px-5 md:px-7 py-2.5 rounded font-bold text-sm md:text-base hover:bg-gray-600 transition">
-                                <i class="fas fa-info-circle text-xs"></i> More Info
+                            <button id="heroInfoBtn" class="more-info-btn bg-gray-700 text-white px-6 md:px-8 py-2 md:py-3 rounded-md font-bold text-base md:text-lg hover:bg-gray-600 transition flex items-center">
+                                <i class="fas fa-info-circle mr-2"></i> More Info
                             </button>
                         </div>
                     </div>
                 </div>
+                
+               
             </section>
-
-            <main class="relative -mt-20 md:-mt-32 z-20 gradient-bottom pb-16">
-                <section class="container mx-auto px-4 mb-10">
-                    <h2 class="text-xl md:text-2xl font-bold mb-2">What's Your Mood Today?</h2>
-                    <p class="text-gray-400 mb-6 text-xs md:text-sm">Pick your vibe and we'll find the perfect match.</p>
-                    <div id="moodContainer" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))"></div>
-                    <div id="selectedMoodDisplay" class="hidden bg-gray-900 rounded-xl p-4 mt-6 border-l-4" style="border-color:var(--netflix-red)">
-                        <div class="flex justify-between items-start gap-3">
+            
+            <main class="relative -mt-32 z-20 gradient-bottom pb-20">
+                
+                <section class="container mx-auto px-4 mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold mb-6">What's Your Mood Today?</h2>
+                    <p class="text-gray-400 mb-8 max-w-2xl text-sm md:text-base">Select your current mood and we'll recommend movies that match your vibe. Your mood changes, so do our recommendations.</p>
+                    
+                    <div id="moodContainer" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-12">
+                        
+                    </div>
+                    
+                    
+                    <div id="selectedMoodDisplay" class="hidden bg-gray-900 rounded-xl p-4 md:p-6 mb-8 border-l-4 border-netflix-red">
+                        <div class="flex justify-between items-center">
                             <div>
-                                <h3 class="font-bold text-sm md:text-base">Mood: <span id="currentMood" class="capitalize" style="color:var(--netflix-red)">Happy</span></h3>
-                                <p id="moodDescription" class="text-gray-400 mt-1 text-xs md:text-sm"></p>
+                                <h3 class="text-lg md:text-xl font-bold">Showing recommendations for: <span id="currentMood" class="text-netflix-red">Happy</span></h3>
+                                <p id="moodDescription" class="text-gray-400 mt-1 text-sm md:text-base">Light-hearted comedies and feel-good movies to lift your spirits</p>
                             </div>
-                            <button id="clearMood" class="text-gray-400 hover:text-white flex-shrink-0">
-                                <i class="fas fa-times"></i>
+                            <button id="clearMood" class="text-gray-400 hover:text-white">
+                                <i class="fas fa-times text-xl md:text-2xl"></i>
                             </button>
                         </div>
                     </div>
