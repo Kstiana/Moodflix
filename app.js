@@ -64,7 +64,9 @@ const elements = {
         home: document.getElementById('homePage'),
         movies: document.getElementById('moviesPage'),
         series: document.getElementById('seriesPage'),
-        people: document.getElementById('peoplePage')
+        people: document.getElementById('peoplePage'),
+        franchises: document.getElementById('franchisesPage'),
+        browseCategoryPage: document.getElementById('browseCategoryPage')
     },
     footer: document.getElementById('footer'),
     watchLaterCount: document.querySelectorAll('.watch-later-count'),
@@ -637,6 +639,7 @@ function initializeEventListeners() {
             e.preventDefault();
             const page = link.dataset.page;
             if (page === 'watchlater') openWatchLaterSidebar();
+            else if (page === 'browse') openBrowseModal();
             else switchPage(page);
         });
     });
@@ -647,6 +650,7 @@ function initializeEventListeners() {
             const page = link.dataset.page;
             closeMobileNav();
             if (page === 'watchlater') openWatchLaterSidebar();
+            else if (page === 'browse') openBrowseModal();
             else switchPage(page);
         });
     });

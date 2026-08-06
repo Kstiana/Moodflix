@@ -56,8 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeMoviesPage() {
     const moviesSearchInput = document.getElementById('moviesSearchInput');
     const genreBar = document.getElementById('moviesGenreBar');
+    const filterBar = document.getElementById('moviesFilterBar');
 
     buildGenrePills(genreBar, MOVIE_GENRES, 'movie');
+    if (filterBar) {
+        buildFilterBar(filterBar, 'movie', () => {
+            moviesCurrentPage = 1;
+            loadMoviesPageContent();
+        });
+    }
     loadMoviesPageContent();
 
     if (moviesSearchInput) {
@@ -81,8 +88,15 @@ function initializeMoviesPage() {
 function initializeSeriesPage() {
     const seriesSearchInput = document.getElementById('seriesSearchInput');
     const genreBar = document.getElementById('seriesGenreBar');
+    const filterBar = document.getElementById('seriesFilterBar');
 
     buildGenrePills(genreBar, TV_GENRES, 'tv');
+    if (filterBar) {
+        buildFilterBar(filterBar, 'tv', () => {
+            seriesCurrentPage = 1;
+            loadSeriesPageContent();
+        });
+    }
     loadSeriesPageContent();
 
     if (seriesSearchInput) {
@@ -150,7 +164,8 @@ async function loadMoviesPageContent() {
 
     try {
         let rows;
-        if (moviesActiveGenre === 0) {
+        const filters = pageFilters.movie;
+        if (moviesActiveGenre === 0 && !isFiltersActive(filters)) {
             const [trending, topRated, action, comedy, sciFi, horror, animation, thriller] = await Promise.all([
                 fetchTrendingMovies(),
                 fetchTopRatedMovies(),
@@ -173,14 +188,16 @@ async function loadMoviesPageContent() {
             ];
         } else {
             const genre = MOVIE_GENRES.find(g => g.id === moviesActiveGenre);
-            const items = await fetchMoviesByGenre(moviesActiveGenre, 20);
-            rows = [{ title: `${genre?.name || 'Genre'} Movies`, items, genreId: moviesActiveGenre, type: 'movie' }];
+            const items = await discoverMedia('movie', moviesActiveGenre, filters, 1, 20);
+            rows = [{ title: `${genre?.name || 'Genre'} Movies`, items, genreId: moviesActiveGenre, type: 'movie', paginate: true }];
         }
 
         moviesContent.innerHTML = '';
         rows.forEach(row => {
             if (row.items && row.items.length > 0) {
-                createPageMovieRow(moviesContent, row.title, row.items, 'movie', row.genreId);
+                createPageMovieRow(moviesContent, row.title, row.items, 'movie', row.genreId, row.paginate);
+            } else if (row.paginate) {
+                moviesContent.innerHTML = '<div class="text-center text-gray-400 py-12">No movies match these filters.</div>';
             }
         });
     } catch {
@@ -195,7 +212,8 @@ async function loadSeriesPageContent() {
 
     try {
         let rows;
-        if (seriesActiveGenre === 0) {
+        const filters = pageFilters.tv;
+        if (seriesActiveGenre === 0 && !isFiltersActive(filters)) {
             const [trending, topRated, action, comedy, drama, sciFi, crime, animation] = await Promise.all([
                 fetchTrendingTV(),
                 fetchTopRatedTV(),
@@ -218,14 +236,16 @@ async function loadSeriesPageContent() {
             ];
         } else {
             const genre = TV_GENRES.find(g => g.id === seriesActiveGenre);
-            const items = await fetchTVByGenre(seriesActiveGenre, 20);
-            rows = [{ title: `${genre?.name || 'Genre'} Series`, items, genreId: seriesActiveGenre, type: 'tv' }];
+            const items = await discoverMedia('tv', seriesActiveGenre, filters, 1, 20);
+            rows = [{ title: `${genre?.name || 'Genre'} Series`, items, genreId: seriesActiveGenre, type: 'tv', paginate: true }];
         }
 
         seriesContent.innerHTML = '';
         rows.forEach(row => {
             if (row.items && row.items.length > 0) {
-                createPageMovieRow(seriesContent, row.title, row.items, 'tv', row.genreId);
+                createPageMovieRow(seriesContent, row.title, row.items, 'tv', row.genreId, row.paginate);
+            } else if (row.paginate) {
+                seriesContent.innerHTML = '<div class="text-center text-gray-400 py-12">No series match these filters.</div>';
             }
         });
     } catch {
@@ -269,7 +289,7 @@ async function searchSeriesPage(query) {
     }
 }
 
-function createPageMovieRow(container, title, items, mediaType = 'movie', genreId = null) {
+function createPageMovieRow(container, title, items, mediaType = 'movie', genreId = null, paginate = false, baseParams = {}) {
     if (!container || !items || items.length === 0) return;
 
     const row = document.createElement('div');
@@ -288,15 +308,16 @@ function createPageMovieRow(container, title, items, mediaType = 'movie', genreI
     row.appendChild(header);
     row.appendChild(grid);
 
-    if (genreId && genreId !== 0) {
+    if (paginate || (genreId && genreId !== 0)) {
         const loadMoreWrapper = document.createElement('div');
         loadMoreWrapper.className = 'text-center mt-6';
         const loadMoreBtn = document.createElement('button');
         loadMoreBtn.className = 'bg-gray-800 text-white px-6 py-2.5 rounded-lg hover:bg-gray-700 transition text-sm font-medium';
         loadMoreBtn.textContent = 'Load More';
         loadMoreBtn.dataset.page = '1';
-        loadMoreBtn.dataset.genreId = genreId;
+        loadMoreBtn.dataset.genreId = genreId || 0;
         loadMoreBtn.dataset.mediaType = mediaType;
+        loadMoreBtn._baseParams = baseParams;
         loadMoreBtn.addEventListener('click', () => handleLoadMoreGenre(loadMoreBtn, grid));
         loadMoreWrapper.appendChild(loadMoreBtn);
         row.appendChild(loadMoreWrapper);
@@ -313,14 +334,11 @@ async function handleLoadMoreGenre(btn, grid) {
     const nextPage = parseInt(btn.dataset.page) + 1;
     const genreId = parseInt(btn.dataset.genreId);
     const mediaType = btn.dataset.mediaType;
+    const filters = pageFilters[mediaType] || defaultFilterState();
+    const baseParams = btn._baseParams || {};
 
     try {
-        let items;
-        if (mediaType === 'tv') {
-            items = await fetchTVByGenre(genreId, 20, nextPage);
-        } else {
-            items = await fetchMoviesByGenre(genreId, 20, nextPage);
-        }
+        const items = await discoverMedia(mediaType, genreId, filters, nextPage, 20, baseParams);
 
         if (items && items.length > 0) {
             items.forEach(item => grid.appendChild(createPageMovieCard(item, mediaType)));

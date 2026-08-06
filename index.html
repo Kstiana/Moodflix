@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>MoodFlix - Movies That Feel Right</title>
+    <meta name="description" content="Movies and series that feel right for your mood.">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#141414">
+    <meta name="background-color" content="#141414">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="shortcut icon" href="icons/favicon.ico">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MoodFlix">
+    <meta name="mobile-web-app-capable" content="yes">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap">
@@ -251,6 +263,189 @@
 
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .filter-select {
+            background: #1f1f1f;
+            color: #ddd;
+            border: 1.5px solid #333;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .filter-select:hover { border-color: #555; }
+        .filter-country-btn { text-align: left; min-width: 110px; }
+        .filter-clear-btn {
+            background: transparent;
+            color: var(--netflix-red);
+            border: 1.5px solid var(--netflix-red);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        .filter-clear-btn:hover { background: rgba(229,9,20,0.12); }
+
+        .country-picker-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 10005;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .country-picker-content {
+            background: #161616;
+            border-radius: 14px;
+            width: min(560px, 100%);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .country-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid #2a2a2a;
+            flex-shrink: 0;
+        }
+        .country-picker-header h3 { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .country-picker-close {
+            color: #aaa;
+            font-size: 1.1rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .country-picker-close:hover { color: var(--netflix-red); }
+        .country-back-btn {
+            background: transparent;
+            border: none;
+            color: #ddd;
+            cursor: pointer;
+            margin-right: 4px;
+        }
+        .country-picker-body {
+            padding: 16px 20px 24px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .country-list-view { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+        .continent-tile, .country-item {
+            background: #232323;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 14px 10px;
+            color: #eee;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .continent-tile { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 10px; }
+        .continent-tile i { font-size: 1.4rem; color: var(--netflix-red); }
+        .continent-tile:hover, .country-item:hover { background: var(--netflix-red); border-color: var(--netflix-red); color: #fff; }
+
+        .browse-modal-content { width: min(760px, 100%); }
+        .browse-modal-body { display: block; grid-template-columns: none; }
+        .browse-section { margin-bottom: 22px; }
+        .browse-section-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 12px; }
+        .browse-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .browse-tile {
+            background: #232323;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 16px 10px;
+            color: #eee;
+            font-size: 0.82rem;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .browse-tile i { font-size: 1.3rem; color: var(--netflix-red); }
+        .browse-tile:hover { background: var(--netflix-red); border-color: var(--netflix-red); color: #fff; }
+        .browse-tile:hover i { color: #fff; }
+
+        .franchise-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 14px;
+        }
+        .franchise-tile {
+            background: linear-gradient(160deg, #1f1f1f, #141414);
+            border: 1px solid #2c2c2c;
+            border-radius: 14px;
+            padding: 24px 12px;
+            color: #eee;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.25s;
+            text-align: center;
+        }
+        .franchise-tile i { font-size: 1.8rem; color: var(--netflix-red); }
+        .franchise-tile:hover { transform: translateY(-4px); border-color: var(--netflix-red); box-shadow: 0 10px 24px rgba(229,9,20,0.2); }
+
+        .franchise-modal-content { width: min(560px, 100%); }
+        .franchise-parts-body { display: block; grid-template-columns: none; padding: 12px; }
+        .franchise-parts-list { display: flex; flex-direction: column; gap: 8px; }
+        .franchise-part-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1f1f1f;
+            border: 1px solid #2a2a2a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: left;
+        }
+        .franchise-part-item:hover { background: #272727; border-color: var(--netflix-red); }
+        .franchise-part-number {
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--netflix-red);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .franchise-part-poster { width: 42px; height: 63px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .franchise-part-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .franchise-part-title { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .franchise-part-year { font-size: 0.75rem; color: #999; }
+        .franchise-part-play { color: #666; font-size: 0.85rem; flex-shrink: 0; }
+        .franchise-part-item:hover .franchise-part-play { color: var(--netflix-red); }
     </style>
 </head>
 <body class="bg-black text-white">
@@ -269,6 +464,8 @@
             <a href="#" class="mobile-nav-link" data-page="movies"><i class="fas fa-film mr-3"></i>Movies</a>
             <a href="#" class="mobile-nav-link" data-page="series"><i class="fas fa-tv mr-3"></i>Series</a>
             <a href="#" class="mobile-nav-link" data-page="people"><i class="fas fa-users mr-3"></i>People</a>
+            <a href="#" id="mobileBrowseBtn" class="mobile-nav-link" data-page="browse"><i class="fas fa-compass mr-3"></i>Browse</a>
+            <a href="#" class="mobile-nav-link" data-page="franchises"><i class="fas fa-layer-group mr-3"></i>Franchises</a>
             <a href="#" class="mobile-nav-link" data-page="watchlater"><i class="far fa-clock mr-3"></i>Watch Later</a>
         </div>
     </div>
@@ -326,6 +523,8 @@
                     <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition text-sm" data-page="movies">Movies</a>
                     <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition text-sm" data-page="series">Series</a>
                     <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition text-sm" data-page="people">People</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition text-sm" data-page="browse">Browse</a>
+                    <a href="#" class="nav-link text-white font-medium hover:text-gray-300 transition text-sm" data-page="franchises">Franchises</a>
                 </div>
             </div>
             <div class="flex items-center gap-3 md:gap-4">
@@ -425,7 +624,8 @@
                         <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                     </div>
                 </div>
-                <div id="moviesGenreBar" class="genre-bar mb-6"></div>
+                <div id="moviesGenreBar" class="genre-bar mb-4"></div>
+                <div id="moviesFilterBar" class="filter-bar mb-6"></div>
                 <div id="moviesContent" class="space-y-10"></div>
             </div>
         </div>
@@ -442,8 +642,26 @@
                         <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                     </div>
                 </div>
-                <div id="seriesGenreBar" class="genre-bar mb-6"></div>
+                <div id="seriesGenreBar" class="genre-bar mb-4"></div>
+                <div id="seriesFilterBar" class="filter-bar mb-6"></div>
                 <div id="seriesContent" class="space-y-10"></div>
+            </div>
+        </div>
+
+        <div id="franchisesPage" class="page">
+            <div class="container mx-auto px-4 pt-20 pb-12">
+                <h1 class="text-2xl md:text-3xl font-bold mb-2">Franchises</h1>
+                <p class="text-gray-400 mb-6 text-sm">Every part, arranged from the beginning to the end.</p>
+                <div id="franchisesGrid" class="franchise-grid"></div>
+            </div>
+        </div>
+
+        <div id="browseCategoryPage" class="page">
+            <div class="container mx-auto px-4 pt-20 pb-12">
+                <h1 id="browseCategoryTitle" class="text-2xl md:text-3xl font-bold mb-5">Browse</h1>
+                <div id="browseCategoryGenreBar" class="genre-bar mb-4"></div>
+                <div id="browseCategoryFilterBar" class="filter-bar mb-6"></div>
+                <div id="browseCategoryContent" class="space-y-10"></div>
             </div>
         </div>
 
@@ -514,8 +732,18 @@
     <script src="app.js"></script>
     <script src="modal.js"></script>
     <script src="cursor.js"></script>
+    <script src="filters.js"></script>
     <script src="pages.js"></script>
+    <script src="browse.js"></script>
+    <script src="franchises.js"></script>
     <script src="watchlater.js"></script>
     <script src="people.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
+    </script>
 </body>
 </html>
