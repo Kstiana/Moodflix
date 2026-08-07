@@ -289,7 +289,7 @@ async function searchSeriesPage(query) {
     }
 }
 
-function createPageMovieRow(container, title, items, mediaType = 'movie', genreId = null, paginate = false, baseParams = {}) {
+function createPageMovieRow(container, title, items, mediaType = 'movie', genreId = null, paginate = false, baseParams = {}, filterContextKey = null, customLoadMore = null) {
     if (!container || !items || items.length === 0) return;
 
     const row = document.createElement('div');
@@ -317,7 +317,9 @@ function createPageMovieRow(container, title, items, mediaType = 'movie', genreI
         loadMoreBtn.dataset.page = '1';
         loadMoreBtn.dataset.genreId = genreId || 0;
         loadMoreBtn.dataset.mediaType = mediaType;
+        loadMoreBtn.dataset.filterContextKey = filterContextKey || mediaType;
         loadMoreBtn._baseParams = baseParams;
+        loadMoreBtn._customLoadMore = customLoadMore;
         loadMoreBtn.addEventListener('click', () => handleLoadMoreGenre(loadMoreBtn, grid));
         loadMoreWrapper.appendChild(loadMoreBtn);
         row.appendChild(loadMoreWrapper);
@@ -332,13 +334,19 @@ async function handleLoadMoreGenre(btn, grid) {
     btn.textContent = 'Loading...';
 
     const nextPage = parseInt(btn.dataset.page) + 1;
-    const genreId = parseInt(btn.dataset.genreId);
     const mediaType = btn.dataset.mediaType;
-    const filters = pageFilters[mediaType] || defaultFilterState();
-    const baseParams = btn._baseParams || {};
 
     try {
-        const items = await discoverMedia(mediaType, genreId, filters, nextPage, 20, baseParams);
+        let items;
+        if (btn._customLoadMore) {
+            items = await btn._customLoadMore(nextPage);
+        } else {
+            const genreId = parseInt(btn.dataset.genreId);
+            const contextKey = btn.dataset.filterContextKey || mediaType;
+            const filters = getFilterState(contextKey);
+            const baseParams = btn._baseParams || {};
+            items = await discoverMedia(mediaType, genreId, filters, nextPage, 20, baseParams);
+        }
 
         if (items && items.length > 0) {
             items.forEach(item => grid.appendChild(createPageMovieCard(item, mediaType)));

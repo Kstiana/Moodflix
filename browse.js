@@ -23,7 +23,91 @@ const BROWSE_SECTIONS = [
             { id: 'kdrama', name: 'K-Drama', mediaType: 'tv', countryParams: { with_origin_country: 'KR' }, icon: 'fa-heart' },
             { id: 'kmovie', name: 'Korean Cinema', mediaType: 'movie', countryParams: { with_origin_country: 'KR' }, icon: 'fa-film' },
             { id: 'bollywood', name: 'Bollywood', mediaType: 'movie', countryParams: { with_origin_country: 'IN', with_original_language: 'hi' }, icon: 'fa-music' },
-            { id: 'blackamerican', name: 'Black American Cinema', mediaType: 'movie', keywordQuery: 'african-american', countryParams: { with_origin_country: 'US' }, icon: 'fa-fist-raised' },
+            {
+                id: 'blackamerican', name: 'Black American Cinema', mediaType: 'movie',
+                multiSource: true,
+
+                countryParams: { with_origin_country: 'US' },
+
+                keywordQueries: [
+                    'african-american', 'blaxploitation', 'african-american history',
+                    'african-american cinema', 'black culture', 'civil rights movement',
+                    'racism', 'slavery', 'interracial relationship', 'black cinema', 'hood film',
+                    'la rebellion', 'black power movement', 'harlem renaissance', 'segregation',
+                    'anti-black racism', 'black lives matter', 'urban cinema', 'colorism'
+                ],
+
+                companyQueries: [
+                    'Tyler Perry Studios', 'Monkeypaw Productions', 'Will Packer Productions',
+                    'Rainforest Films', 'Codeblack Films', 'Array Releasing',
+                    '40 Acres and a Mule Filmworks', 'MACRO', 'Harpo Films',
+                    'Overbrook Entertainment', 'SpringHill Entertainment', 'Hidden Empire Film Group',
+                    'BET Films', 'State Street Pictures', 'Significant Productions',
+                    'HartBeat Productions', 'Flavor Unit Entertainment', 'Artists First',
+                    'Jackson Street Entertainment', 'AFFRM', 'Debra Martin Chase Productions',
+                    'Confluential Films', 'Simmons Lathan Media Group', 'Def Pictures',
+                    'Allen Media Group', 'Entertainment Studios', 'Datari Turner Productions',
+                    'Outlier Society Productions', 'JuVee Productions', 'Westbrook Studios',
+                    'Hillman Grad Productions', 'Proximity Media', 'Hoorae Media',
+                    'Lee Daniels Entertainment', 'Homegrown Pictures', 'Micheaux Film Corporation',
+                    'Amblin Partners', 'Keri Productions', 'Barwood Films'
+                ],
+
+                peopleQueries: [
+                    'Spike Lee', 'Tyler Perry', 'Ryan Coogler', 'Jordan Peele', 'Ava DuVernay',
+                    'Barry Jenkins', 'John Singleton', 'F. Gary Gray', 'Malcolm D. Lee',
+                    'Gina Prince-Bythewood', 'Lee Daniels', 'George Tillman Jr.', 'Antoine Fuqua',
+                    'Reginald Hudlin', 'Robert Townsend', 'Mario Van Peebles', 'Carl Franklin',
+                    'Kasi Lemmons', 'Tim Story', 'Kenya Barris', 'Deon Taylor', 'Debbie Allen',
+                    'Julie Dash', 'Charles Burnett', 'Bill Duke', 'Rusty Cundieff', 'Darnell Martin',
+                    'Cheryl Dunye', 'Dee Rees', 'Nate Parker', 'Rick Famuyiwa', 'Justin Simien',
+                    'Terence Nance', 'Nia DaCosta', 'Cord Jefferson', 'RaMell Ross', 'Radha Blank',
+                    'Stella Meghie', 'Melina Matsoukas', 'Salim Akil', 'Mara Brock Akil',
+                    'Debra Martin Chase', 'Lena Waithe', 'Issa Rae', 'Oscar Micheaux', 'Gordon Parks',
+                    'Melvin Van Peebles', 'Euzhan Palcy', 'Albert Hughes', 'Allen Hughes',
+                    'Shaka King', 'Blitz Bazawule', 'George C. Wolfe', 'Boots Riley', 'Steve McQueen',
+                    'Denzel Washington', 'Samuel L. Jackson', 'Will Smith', 'Jamie Foxx',
+                    'Michael B. Jordan', 'Kevin Hart', 'Eddie Murphy', 'Chris Tucker', 'Chris Rock',
+                    'Ice Cube', 'Forest Whitaker', 'Don Cheadle', 'Morris Chestnut', 'Omar Epps',
+                    'Larenz Tate', 'Taye Diggs', 'Terrence Howard', 'Mekhi Phifer',
+                    'Cuba Gooding Jr.', 'Ving Rhames', 'Marlon Wayans', 'Shawn Wayans',
+                    'Keenan Ivory Wayans', 'Damon Wayans', 'Mike Epps', 'Cedric the Entertainer',
+                    'Martin Lawrence', 'Anthony Mackie', 'Chadwick Boseman', 'Wesley Snipes',
+                    'Richard Roundtree', 'Yahya Abdul-Mateen II', 'Jonathan Majors', 'Daniel Kaluuya',
+                    'Lakeith Stanfield', 'Colman Domingo', 'Sterling K. Brown', 'Mahershala Ali',
+                    'Trevante Rhodes', 'André Holland', 'John Boyega', 'Idris Elba',
+                    'Laurence Fishburne', 'Delroy Lindo', 'Giancarlo Esposito', 'Blair Underwood',
+                    'Boris Kodjoe', 'Michael Ealy', 'Jesse Williams', 'Rockmond Dunbar',
+                    'Hill Harper', 'Isaiah Washington', 'Malcolm-Jamal Warner', 'LeVar Burton',
+                    'Keith David', 'Danny Glover', 'Anthony Anderson', 'David Alan Grier',
+                    'Sidney Poitier', 'Harry Belafonte', 'Billy Dee Williams', 'Bernie Mac',
+                    'James Earl Jones', 'Ossie Davis', 'Morgan Freeman', 'Louis Gossett Jr.',
+                    'Woody Strode', 'Paul Robeson', 'Fred Williamson', 'Richard Pryor', 'Bill Cosby',
+                    'Jeffrey Wright', 'John David Washington', 'Leslie Odom Jr.', 'Corey Hawkins',
+                    'Brian Tyree Henry', 'Stephan James', 'Damson Idris', 'Aldis Hodge',
+                    'Kelvin Harrison Jr.', 'Donald Glover', 'Jharrel Jerome', 'Kingsley Ben-Adir',
+                    'Ncuti Gatwa',
+                    'Viola Davis', 'Angela Bassett', 'Regina King', 'Regina Hall', 'Taraji P. Henson',
+                    'Queen Latifah', 'Halle Berry', 'Sanaa Lathan', 'Tiffany Haddish', 'Nia Long',
+                    'Gabrielle Union', 'Kerry Washington', 'Octavia Spencer', 'Aunjanue Ellis-Taylor',
+                    'Whoopi Goldberg', 'Loretta Devine', 'Tessa Thompson', 'Keke Palmer',
+                    'Jurnee Smollett', 'Amandla Stenberg', 'Dominique Fishback', 'Zoe Saldana',
+                    'Meagan Good', 'Lupita Nyong\'o', 'Cynthia Erivo', 'Vivica A. Fox',
+                    'Naturi Naughton', 'Vanessa Bell Calloway', 'Alfre Woodard', 'Kimberly Elise',
+                    'Ruth Negga', 'Cicely Tyson', 'Ruby Dee', 'Pam Grier', 'Diahann Carroll',
+                    'Phylicia Rashad', 'CCH Pounder', 'Vanessa Williams', 'S. Epatha Merkerson',
+                    'Wanda Sykes', 'Mo\'Nique', 'Niecy Nash', 'Gabourey Sidibe', 'Danielle Brooks',
+                    'Uzo Aduba', 'Aja Naomi King', 'Yvonne Orji', 'Jenifer Lewis', 'Tisha Campbell',
+                    'Tichina Arnold', 'Yara Shahidi', 'Marsai Martin', 'Storm Reid', 'Dorothy Dandridge',
+                    'Lena Horne', 'Hattie McDaniel', 'Juanita Moore', 'Eartha Kitt', 'Lynn Whitfield',
+                    'Jada Pinkett Smith', 'Thandiwe Newton', 'Rosario Dawson', 'Rashida Jones',
+                    'Tracee Ellis Ross', 'Zazie Beetz', 'KiKi Layne', 'Teyana Taylor',
+                    'Da\'Vine Joy Randolph', 'Lashana Lynch', 'Laura Harrier', 'Thuso Mbedu',
+                    'Coco Jones', 'Ayo Edebiri'
+                ],
+
+                icon: 'fa-fist-raised'
+            },
             { id: 'cdrama', name: 'C-Drama', mediaType: 'tv', countryParams: { with_origin_country: 'CN' }, icon: 'fa-yin-yang' },
             { id: 'anime', name: 'Anime', mediaType: 'tv', genreId: 16, countryParams: { with_origin_country: 'JP' }, icon: 'fa-star' },
             { id: 'british', name: 'British Cinema', mediaType: 'movie', countryParams: { with_origin_country: 'GB' }, icon: 'fa-crown' },
@@ -36,6 +120,8 @@ const BROWSE_SECTIONS = [
 ];
 
 const keywordIdCache = {};
+const companyIdCache = {};
+const personIdCache = {};
 
 async function resolveKeywordId(query) {
     if (keywordIdCache[query] !== undefined) return keywordIdCache[query];
@@ -50,6 +136,32 @@ async function resolveKeywordId(query) {
     }
 }
 
+async function resolveCompanyId(query) {
+    if (companyIdCache[query] !== undefined) return companyIdCache[query];
+    try {
+        const data = await fetchFromTMDB(`/search/company?query=${encodeURIComponent(query)}`);
+        const id = data?.results?.[0]?.id || null;
+        companyIdCache[query] = id;
+        return id;
+    } catch {
+        companyIdCache[query] = null;
+        return null;
+    }
+}
+
+async function resolvePersonId(query) {
+    if (personIdCache[query] !== undefined) return personIdCache[query];
+    try {
+        const data = await fetchFromTMDB(`/search/person?query=${encodeURIComponent(query)}`);
+        const id = data?.results?.[0]?.id || null;
+        personIdCache[query] = id;
+        return id;
+    } catch {
+        personIdCache[query] = null;
+        return null;
+    }
+}
+
 async function buildCategoryBaseParams(category) {
     const params = Object.assign({}, category.countryParams || {});
     if (category.companyId) params.with_companies = category.companyId;
@@ -59,6 +171,43 @@ async function buildCategoryBaseParams(category) {
         if (keywordId) params.with_keywords = keywordId;
     }
     return params;
+}
+
+async function buildCategorySourceGroups(category) {
+    const groups = [];
+
+    if (category.keywordQueries && category.keywordQueries.length) {
+        const ids = (await Promise.all(category.keywordQueries.map(resolveKeywordId))).filter(Boolean);
+        if (ids.length) groups.push(Object.assign({}, category.countryParams || {}, { with_keywords: ids.join('|') }));
+    }
+    if (category.companyQueries && category.companyQueries.length) {
+        const ids = (await Promise.all(category.companyQueries.map(resolveCompanyId))).filter(Boolean);
+        if (ids.length) groups.push(Object.assign({}, category.countryParams || {}, { with_companies: ids.join('|') }));
+    }
+    if (category.peopleQueries && category.peopleQueries.length) {
+        const ids = (await Promise.all(category.peopleQueries.map(resolvePersonId))).filter(Boolean);
+        if (ids.length) groups.push(Object.assign({}, category.countryParams || {}, { with_people: ids.join('|') }));
+    }
+
+    if (groups.length === 0) groups.push(Object.assign({}, category.countryParams || {}));
+    return groups;
+}
+
+async function discoverMultiSource(mediaType, genreId, filters, page, count, sourceGroups, seenIds) {
+    const resultsPerGroup = await Promise.all(
+        sourceGroups.map(params => discoverMedia(mediaType, genreId, filters, page, count, params))
+    );
+
+    const merged = [];
+    resultsPerGroup.flat().forEach(item => {
+        if (!seenIds.has(item.id)) {
+            seenIds.add(item.id);
+            merged.push(item);
+        }
+    });
+
+    merged.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    return merged;
 }
 
 function findBrowseCategory(id) {
@@ -157,12 +306,27 @@ async function openBrowseCategoryPage(categoryId) {
     async function loadCategory() {
         if (content) content.innerHTML = generatePageSkeletons(2);
         try {
-            const baseParams = await buildCategoryBaseParams(category);
             const filters = getFilterState(contextKey);
+
+            if (category.multiSource) {
+                const sourceGroups = await buildCategorySourceGroups(category);
+                const seenIds = new Set();
+                const items = await discoverMultiSource(category.mediaType, activeGenre, filters, 1, 20, sourceGroups, seenIds);
+                content.innerHTML = '';
+                if (items.length > 0) {
+                    const customLoadMore = nextPage => discoverMultiSource(category.mediaType, activeGenre, filters, nextPage, 20, sourceGroups, seenIds);
+                    createPageMovieRow(content, category.name, items, category.mediaType, activeGenre, true, {}, contextKey, customLoadMore);
+                } else {
+                    content.innerHTML = '<div class="text-center text-gray-400 py-12">No titles found for this category yet.</div>';
+                }
+                return;
+            }
+
+            const baseParams = await buildCategoryBaseParams(category);
             const items = await discoverMedia(category.mediaType, activeGenre, filters, 1, 20, baseParams);
             content.innerHTML = '';
             if (items.length > 0) {
-                createPageMovieRow(content, category.name, items, category.mediaType, activeGenre, true, baseParams);
+                createPageMovieRow(content, category.name, items, category.mediaType, activeGenre, true, baseParams, contextKey);
             } else {
                 content.innerHTML = '<div class="text-center text-gray-400 py-12">No titles found for this category yet.</div>';
             }
